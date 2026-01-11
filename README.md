@@ -8,6 +8,12 @@ This project demonstrates an AI-powered analytics platform using Apache Iceberg,
 *   Docker & Docker Compose
 *   Maven
 
+> [!WARNING] NOT FOR PRODUCTION USE
+> 
+> This project is for experimentation and prototyping. It bundles a spark master node inside of a Spring Boot project.
+> A production Iceberg/Spark project would have a separate Spark system with master and worker nodes, and of course use
+> authentication for the various services running in docker.
+
 ## Getting Started
 
 ### 1. Start Infrastructure
