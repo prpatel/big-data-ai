@@ -1,0 +1,66 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>Admin - Iceberg/Spark/AI Demo</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" >
+    <script src="https://unpkg.com/htmx.org@2.0.1"></script>
+</head>
+<body>
+<main class="container">
+    <section>
+        <h1>Admin Operations</h1>
+        <a href="/">Back to Home</a>
+    </section>
+
+    <section>
+        <h2>Clear Data</h2>
+        <p>Remove all data in the iceberg tables.</p>
+        <button hx-post="/admin/clear"
+                hx-trigger="click"
+                hx-target="#clear-result">
+            Clear Data
+        </button>
+        <div id="clear-result"></div>
+    </section>
+
+    <section>
+        <h2>Download Data</h2>
+        <p>Download data files for a specific year.</p>
+        <section>
+            <h3>Files already downloaded</h3>
+            <ul>
+                <li th:each="file : ${files}" th:text="${file}"></li>
+            </ul>
+        </section>
+        <label for="year">Year:</label>
+        <input type="text" id="year" name="year" placeholder="Enter year (e.g., 2023)">
+        <button hx-post="/admin/download"
+                hx-trigger="click"
+                hx-target="#download-result"
+                hx-include="#year">
+            Download Data
+        </button>
+        <div id="download-result"></div>
+    </section>
+
+    <section>
+        <h2>Load Data</h2>
+        <p>Load data from the files (in a directory) into Iceberg.</p>
+        <label for="loadYear">Year (Optional):</label>
+        <input type="text" id="loadYear" name="year" placeholder="Enter year (e.g., 2023)">
+        <small>If no year is specified, all files will be loaded.</small>
+        <button hx-post="/admin/load"
+                hx-trigger="click"
+                hx-target="#load-result"
+                hx-include="#loadYear">
+            Load Data
+        </button>
+        <div id="load-result"></div>
+    </section>
+
+</main>
+</body>
+</html>

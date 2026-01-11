@@ -1,0 +1,11 @@
+pyiceberg[snappy,s3fs,pyiceberg-core]
+polars
+pyarrow
+duckdb
+daft
+trino[sqlalchemy]
+jupyterlab
+jupyterlab_myst
+jupyter_ruff
+ipywidgets
+quixstreams[avro]

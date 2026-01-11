@@ -1,0 +1,116 @@
+services:
+  jupyter:
+    build:
+      context: images/jupyter
+    command:
+      - "jupyter"
+      - "lab"
+      - "--ip"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"
+      - "--notebook-dir"
+      - "/app/notebooks"
+      - "--IdentityProvider.token=''"
+      - "--ServerApp.password=''"
+      - "--no-browser"
+    healthcheck:
+      test: ["CMD", "curl", "localhost:8080/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 2
+      start_period: 15s
+    volumes:
+      - ./notebooks:/app/notebooks
+      - ./data:/app/notebooks/data
+    ports:
+      - "8080:8080"
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=minio1234
+    command:
+      - server
+      - /data
+      - --console-address
+      - ":9001"
+    volumes:
+      - minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 10s
+      retries: 2
+      start_period: 15s
+  db:
+    image: postgres:18-alpine
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -p 5432 -d postgres" ]
+      interval: 2s
+      timeout: 10s
+      retries: 2
+      start_period: 10s
+
+  lakekeeper:
+    image: quay.io/lakekeeper/catalog:v0.10.2
+    pull_policy: always
+    environment:
+      - LAKEKEEPER__PG_ENCRYPTION_KEY=P0d6Ye9v4rXDUpHUSj003yfF4E07SSBj
+      - LAKEKEEPER__PG_DATABASE_URL_READ=postgresql://postgres:postgres@db:5432/postgres
+      - LAKEKEEPER__PG_DATABASE_URL_WRITE=postgresql://postgres:postgres@db:5432/postgres
+      - RUST_LOG=trace,axum=trace,sqlx=trace,iceberg-catalog=trace
+    command: [ "serve" ]
+    healthcheck:
+      test: [ "CMD", "/home/nonroot/iceberg-catalog", "healthcheck" ]
+      interval: 1s
+      timeout: 10s
+      retries: 3
+      start_period: 3s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    ports:
+      - "8181:8181"
+  migrate:
+    image: quay.io/lakekeeper/catalog:v0.10.2
+    pull_policy: always
+    environment:
+      - LAKEKEEPER__PG_DATABASE_URL_READ=postgresql://postgres:postgres@db:5432/postgres
+      - LAKEKEEPER__PG_DATABASE_URL_WRITE=postgresql://postgres:postgres@db:5432/postgres
+      - RUST_LOG=info
+    restart: "no"
+    command: [ "migrate" ]
+    depends_on:
+      db:
+        condition: service_healthy
+  trino:
+    image: trinodb/trino:477
+    volumes:
+      - ./images/trino/lakekeeper.properties:/etc/trino/catalog/lakekeeper.properties
+
+    healthcheck:
+      test: [ "CMD", "curl", "-I", "http://localhost:8080/v1/status" ]
+      interval: 2s
+      timeout: 10s
+      retries: 2
+      start_period: 10s
+    ports:
+      - "9999:8080"
+volumes:
+  minio:
+  nessie:
+  db:

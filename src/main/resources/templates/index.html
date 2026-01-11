@@ -1,0 +1,52 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>Iceberg/Spark/AI Demo</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>AI Power Analytics with Iceberg/Spark/AI Demo</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" >
+    <script src="https://unpkg.com/htmx.org@2.0.1"></script>
+</head>
+<body>
+<main class="container">
+    <section>
+        <h1>AI Real Estate Analyst: Iceberg/Spark/AI Demo</h1>
+
+        <section>
+            <input type="text"
+                   id="q"
+                   name="q"
+                   placeholder="Enter in your question here"
+            >
+        </section>
+
+        <button hx-post="/generatequery"
+                hx-trigger="click"
+                hx-target="#generatedsql"
+                hx-include="#q">
+            Generate Query
+        </button>
+    </section>
+
+    <section>
+        <div id="generatedsql" name="generatedsql" value="placeholder"></div>
+
+        <button hx-post="/runquery"
+                hx-trigger="click"
+                hx-target="#queryresult"
+                hx-include="#generatedsql">
+            Run Query
+        </button>
+    </section>
+
+    <section>
+            <pre id="queryresult">
+
+            </pre>
+    </section>
+
+</main>
+</body>
+</html>
