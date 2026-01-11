@@ -16,6 +16,17 @@
     </section>
 
     <section>
+        <h2>Setup Environment</h2>
+        <p>Bootstrap the Iceberg catalog (LakeKeeper) and create the warehouse bucket.</p>
+        <button hx-post="/admin/setup"
+                hx-trigger="click"
+                hx-target="#setup-result">
+            Setup Environment
+        </button>
+        <div id="setup-result"></div>
+    </section>
+
+    <section>
         <h2>Clear Data</h2>
         <p>Remove all data in the iceberg tables.</p>
         <button hx-post="/admin/clear"

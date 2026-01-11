@@ -29,6 +29,13 @@ class AdminController {
         return "admin";
     }
 
+    @PostMapping("/setup")
+    public String setup(Model model) {
+        icebergService.setup();
+        model.addAttribute("message", "Setup operation initiated.");
+        return "admin_result :: result";
+    }
+
     @PostMapping("/clear")
     public String clear(Model model) {
         icebergService.clear();
