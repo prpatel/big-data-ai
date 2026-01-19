@@ -26,30 +26,37 @@ docker compose up -d
 
 ### 2. Configure LLM (Ollama)
 
-This project uses Ollama for the LLM. Ensure you have Ollama running and a model pulled (e.g., `llama3`).
+This project uses Ollama for the LLM. Ensure you have Ollama running and a model pulled (e.g., `qwen3-coder`).
+
+```bash
+ollama pull qwen3-coder:latest
+```
+
 
 Update `src/main/resources/application.properties` with your Ollama configuration:
 
 ```properties
 spring.ai.ollama.base-url=http://localhost:11434
-spring.ai.ollama.chat.model=llama3
+spring.ai.ollama.chat.model=qwen3-coder:latest
 ```
 
 ### 3. Run the Application
 
+This app is configured to run Spring Boot on port 8888
+
 Run the Spring Boot application:
 
 ```bash
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 
-The application will be available at `http://localhost:8080`.
+The application will be available at `http://localhost:8888/`.
 
 ## Setup & Data Loading
 
 Before you can query data, you need to set up the environment and load data. You can do this via the Admin interface.
 
-1.  Navigate to the **Admin Page**: `http://localhost:8080/admin`
+1.  Navigate to the **Admin Page**: `http://localhost:8888/admin`
 
 2.  **Bootstrap Iceberg Catalog (LakeKeeper)**:
     *   The application attempts to bootstrap the project and create the warehouse bucket on startup.
