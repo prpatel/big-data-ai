@@ -2,7 +2,9 @@ package dev.prpatel.iceberg.app;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
+import java.util.Map;
 
 @Service
 //@Qualifier("ollamaChatModel")
@@ -30,7 +32,7 @@ class AiService {
                 I don't want the output to be escaped.
                 The table name is: lakekeeper.housing.staging_prices.
                 Make sure the the query accommodates for case insensitivity.
-                I want to return all the results.
+                I want to return only the first 10 results.
                 The query should only include columns that are in the table. The table has these indicated in the user prompt.
                 
                 """;
@@ -44,6 +46,12 @@ class AiService {
         ChatResponse llmResponse = chatClient.prompt()
                 .system(systemPrompt) // Apply the system role
                 .user(userPrompt)     // Provide the user's request
+                .options(OpenAiChatOptions.builder()
+                        .extraBody(Map.of(
+                                "chat_template_kwargs", Map.of("enable_thinking", false),
+                                "reasoning_budget", 0
+                        ))
+                        .build())
                 .call()
                 .chatResponse();
         System.out.println("Response metadata: \n"+llmResponse.getResult().getMetadata());

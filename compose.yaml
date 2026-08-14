@@ -71,7 +71,7 @@ services:
       - RUST_LOG=trace,axum=trace,sqlx=trace,iceberg-catalog=trace
     command: [ "serve" ]
     healthcheck:
-      test: [ "CMD", "/home/nonroot/iceberg-catalog", "healthcheck" ]
+      test: [ "CMD", "/home/nonroot/lakekeeper", "healthcheck" ]
       interval: 1s
       timeout: 10s
       retries: 3
@@ -110,6 +110,21 @@ services:
       start_period: 10s
     ports:
       - "9999:8080"
+  app:
+    image: big-data-ai-app
+    ports:
+      - "8888:8888"
+    depends_on:
+      lakekeeper:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8888/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 volumes:
   minio:
   nessie:

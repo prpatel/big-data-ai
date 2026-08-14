@@ -25,7 +25,7 @@ public class IcebergController {
 
     @GetMapping("/getCatalog")
     public String getCatalog() {
-        System.out.printf("Connecting to Lakekeeper running on localhost:8181\n");
+        System.out.printf("Connecting to Lakekeeper running on lakekeeper:8181\n");
 
         StringBuilder sb = new StringBuilder("<pre>");
         try (RESTCatalog catalog = new RESTCatalog()) {
@@ -33,7 +33,7 @@ public class IcebergController {
             // 2. Set the configuration properties for the catalog
             Map<String, String> properties = new HashMap<>();
             // Lakekeeper URL running in docker
-            properties.put("uri", "http://localhost:8181/catalog");
+            properties.put("uri", "http://lakekeeper:8181/catalog");
             // This is the name of the warehouse name created in Lakekeeper
             properties.put("warehouse", "lakehouse");
             // Add any necessary credential properties here, e.g.:

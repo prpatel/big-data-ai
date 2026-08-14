@@ -18,7 +18,7 @@ public class CustomDnsResolver implements InetAddressResolver {
     static {
         Map<String, InetAddress> hosts = new HashMap<>();
         try {
-            hosts.put("minio", InetAddress.getByAddress("localhost", new byte[]{127, 0, 0, 1}));
+            // hosts.put("minio", InetAddress.getByAddress("localhost", new byte[]{127, 0, 0, 1}));
             hosts.put("localhost", InetAddress.getByAddress("localhost", new byte[]{127, 0, 0, 1}));
             // examples if more are needed to override other docker services or other places
 //            hosts.put("api.internal", InetAddress.getByAddress("api.internal", new byte[]{(byte)192, (byte)168, 1, 100}));

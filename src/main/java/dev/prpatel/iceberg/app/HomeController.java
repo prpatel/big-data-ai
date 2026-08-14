@@ -51,7 +51,7 @@ public class HomeController {
             long count = resultsDF.count();
             System.out.println("Count:" + count);
             resultsDF.show();
-            output = formatForHtml(formatDataSet(resultsDF, 10));
+            output = formatForHtml(formatDataSet(resultsDF, 100));
         } catch (Exception e) {
             System.err.println("An error occurred while reading the Iceberg table.");
             e.printStackTrace();

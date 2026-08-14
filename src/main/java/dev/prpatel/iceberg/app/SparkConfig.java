@@ -22,7 +22,7 @@ public class SparkConfig {
                 // Specify that this catalog is an Iceberg RESTCatalog
                 .config("spark.sql.catalog.lakekeeper.catalog-impl", "org.apache.iceberg.rest.RESTCatalog")
                 // Provide the URI for your LakeKeeper REST endpoint
-                .config("spark.sql.catalog.lakekeeper.uri", "http://localhost:8181/catalog")
+                .config("spark.sql.catalog.lakekeeper.uri", "http://lakekeeper:8181/catalog")
                 // Specify the warehouse name
                 .config("spark.sql.catalog.lakekeeper.warehouse", "lakehouse")
                 .getOrCreate();

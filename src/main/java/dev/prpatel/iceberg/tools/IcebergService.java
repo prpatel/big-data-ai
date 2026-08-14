@@ -193,7 +193,7 @@ public class IcebergService {
 
     public void setup() {
         S3Client s3 = S3Client.builder()
-                .endpointOverride(URI.create("http://localhost:9000"))
+                .endpointOverride(URI.create("http://minio:9000"))
                 .region(Region.US_EAST_1)
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("minio", "minio1234")))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
@@ -205,7 +205,7 @@ public class IcebergService {
 
         System.out.println("Bootstrapping project...");
         HttpClient client = HttpClient.newHttpClient();
-        String baseUrl = "http://localhost:8181";
+        String baseUrl = "http://lakekeeper:8181";
 
         try {
             bootstrapProject(client, baseUrl);
