@@ -2,9 +2,7 @@ package dev.prpatel.iceberg.app;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
-import java.util.Map;
 
 @Service
 //@Qualifier("ollamaChatModel")
@@ -46,8 +44,6 @@ class AiService {
         ChatResponse llmResponse = chatClient.prompt()
                 .system(systemPrompt) // Apply the system role
                 .user(userPrompt)     // Provide the user's request
-                // Spring AI 2.0: ChatClient.options() takes the builder, not a built instance
-                .options(OpenAiChatOptions.builder())
                 .call()
                 .chatResponse();
         System.out.println("Response metadata: \n"+llmResponse.getResult().getMetadata());
