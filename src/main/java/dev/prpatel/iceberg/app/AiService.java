@@ -3,6 +3,7 @@ package dev.prpatel.iceberg.app;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -14,18 +15,21 @@ class AiService {
 
     private final ChatClient chatClient;
 
-    public AiService(ChatClient.Builder chatClientBuilder) {
-        // Thinking is turned off here rather than in application.properties because the two
-        // inference servers this app targets accept different parameters for it, and one of
-        // them needs a JSON boolean that a .properties file cannot express. Both switches are
-        // set so the endpoint can be swapped without touching this. See application.properties.
-        this.chatClient = chatClientBuilder
-                .defaultOptions(OpenAiChatOptions.builder()
-                        // honoured by the HuggingFace router, ignored by the local server
-                        .reasoningEffort("none")
-                        // honoured by the local server, rejected by the HuggingFace router
-                        .extraBody(Map.of("chat_template_kwargs", Map.of("enable_thinking", false))))
-                .build();
+    public AiService(ChatClient.Builder chatClientBuilder,
+                     @Value("${app.ai.use-chat-template-kwargs:false}") boolean useChatTemplateKwargs) {
+
+        OpenAiChatOptions.Builder options = OpenAiChatOptions.builder();
+
+        // Only the local server understands this, and the HuggingFace router rejects the whole
+        // request with a 400 if it is present, so it has to be switched with the endpoint. It
+        // lives here rather than in application.properties because it needs a real JSON boolean,
+        // which a properties file cannot produce. The flag guarding it is an ordinary boolean,
+        // so that much does live in application.properties, alongside the endpoint it belongs to.
+        if (useChatTemplateKwargs) {
+            options.extraBody(Map.of("chat_template_kwargs", Map.of("enable_thinking", false)));
+        }
+
+        this.chatClient = chatClientBuilder.defaultOptions(options).build();
     }
 
     public ChatClient getChatClient() {
