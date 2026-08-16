@@ -46,12 +46,8 @@ class AiService {
         ChatResponse llmResponse = chatClient.prompt()
                 .system(systemPrompt) // Apply the system role
                 .user(userPrompt)     // Provide the user's request
-                .options(OpenAiChatOptions.builder()
-                        .extraBody(Map.of(
-                                "chat_template_kwargs", Map.of("enable_thinking", false),
-                                "reasoning_budget", 0
-                        ))
-                        .build())
+                // Spring AI 2.0: ChatClient.options() takes the builder, not a built instance
+                .options(OpenAiChatOptions.builder())
                 .call()
                 .chatResponse();
         System.out.println("Response metadata: \n"+llmResponse.getResult().getMetadata());
