@@ -2,7 +2,10 @@ package dev.prpatel.iceberg.app;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
 
 @Service
 //@Qualifier("ollamaChatModel")
@@ -12,7 +15,17 @@ class AiService {
     private final ChatClient chatClient;
 
     public AiService(ChatClient.Builder chatClientBuilder) {
-        this.chatClient = chatClientBuilder.build();
+        // Thinking is turned off here rather than in application.properties because the two
+        // inference servers this app targets accept different parameters for it, and one of
+        // them needs a JSON boolean that a .properties file cannot express. Both switches are
+        // set so the endpoint can be swapped without touching this. See application.properties.
+        this.chatClient = chatClientBuilder
+                .defaultOptions(OpenAiChatOptions.builder()
+                        // honoured by the HuggingFace router, ignored by the local server
+                        .reasoningEffort("none")
+                        // honoured by the local server, rejected by the HuggingFace router
+                        .extraBody(Map.of("chat_template_kwargs", Map.of("enable_thinking", false))))
+                .build();
     }
 
     public ChatClient getChatClient() {
