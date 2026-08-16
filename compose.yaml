@@ -114,6 +114,8 @@ services:
     image: big-data-ai-app
     ports:
       - "8888:8888"
+    environment:
+      - HF_TOKEN=${HF_TOKEN}
     depends_on:
       lakekeeper:
         condition: service_healthy

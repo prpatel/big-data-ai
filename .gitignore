@@ -36,3 +36,8 @@ build/
 data/house_prices/
 
 .DS_Store
+
+### Secrets ###
+.env
+.env.*
+!.env.example
