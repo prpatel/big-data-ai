@@ -22,9 +22,7 @@ class AiService {
 
         // The system prompt sets the context and rules for the AI.
         String systemPrompt = """
-                /no_think
-                no_think
-                You are a database query assistant. You are going to take a user's question and construct a 
+                You are a database query assistant. You are going to take a user's question and construct a
                 Spark SQL query from the question.
                 Don't give me the explanation just give me the query. 
                 I don't want the output to be escaped.
