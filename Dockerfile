@@ -14,6 +14,9 @@ COPY src ./src
 RUN mvn -q -B -DskipTests package
 
 FROM eclipse-temurin:21-jre-alpine
+RUN apk add --no-cache git && \
+    git config --global user.email "prpatel@users.noreply.huggingface.co" && \
+    git config --global user.name "prpatel"
 WORKDIR /app
 
 COPY --from=build /build/target/big-data-ai-0.0.1-SNAPSHOT.jar app.jar
