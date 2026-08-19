@@ -100,6 +100,16 @@ if [[ "${pgdata_mode}" != "700" && "${pgdata_mode}" != "750" ]]; then
     exit 1
 fi
 
+# The same storage also drops empty directories, because object stores have keys rather
+# than real directories. A cleanly shut down cluster leaves a dozen empty ones inside
+# PGDATA, so they come back missing and Postgres dies on the first one it opens. All of
+# these are legitimately empty at rest, so recreating them restores a valid cluster.
+for pgdir in pg_commit_ts pg_dynshmem pg_logical/mappings pg_logical/snapshots pg_notify \
+             pg_replslot pg_serial pg_snapshots pg_stat pg_stat_tmp pg_tblspc \
+             pg_twophase pg_wal/archive_status pg_wal/summaries; do
+    mkdir -p "${PGDATA}/${pgdir}"
+done
+
 run_tagged postgres "${PGBIN}/postgres" \
     -D "${PGDATA}" \
     -p "${PGPORT}" \
