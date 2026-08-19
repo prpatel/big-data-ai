@@ -67,6 +67,31 @@ nothing in the app talks to it and Spaces would not be able to reach it anyway. 
 back with `docker compose up -d trino` when you want ad-hoc SQL over the warehouse. Note
 `compose.kafka.yaml` includes `compose.yaml`, so do not delete the file.
 
+## Storage caveat on Hugging Face Spaces
+
+A Space's `/data` is object-backed, not a POSIX block volume. Two consequences that
+`docker-entrypoint.sh` works around at every boot:
+
+- **File modes are not preserved.** `initdb` sets `PGDATA` to `0700`; it comes back
+  group/world-readable, and Postgres refuses to start on anything but `0700`/`0750`.
+  The entrypoint re-applies the mode.
+- **Empty directories do not survive.** An object store has keys, not directories. A
+  cleanly shut down Postgres leaves fourteen empty directories inside `PGDATA`
+  (`pg_notify`, `pg_wal/archive_status`, `pg_logical/*`, ...), and the server dies on
+  the first one it opens. The entrypoint recreates them.
+
+> [!WARNING]
+> These workarounds make Postgres *survive* this storage; they do not make the storage
+> *suitable* for it. Postgres assumes durable `fsync`, atomic rename and working file
+> locking, and an object-backed mount guarantees none of them. A hard kill mid-write can
+> leave a corrupt cluster. That is an acceptable trade for a demo whose data can be
+> reloaded from `/admin` in a couple of minutes; it would not be for anything you care
+> about. The durable fix is to keep `PGDATA` on the container's own filesystem and
+> persist only a periodic `pg_dump` to `/data` - the catalog metadata is small.
+
+MinIO's objects and the downloaded CSVs are far less demanding than a database and sit on
+the same volume without special handling.
+
 ## Deployment Topologies
 
 The same services run in two different shapes depending on where the app is deployed.
