@@ -1,3 +1,15 @@
+---
+title: Big Data AI Basic
+emoji: 🦀
+colorFrom: red
+colorTo: gray
+sdk: docker
+pinned: false
+license: apache-2.0
+short_description: big-data-ai-basic
+---
+
+
 # Iceberg/Spark/AI Demo
 
 This project demonstrates an AI-powered analytics platform using Apache Iceberg, Apache Spark, and Spring AI. It allows users to query real estate data using natural language, leveraging an LLM to generate Spark SQL queries against an Iceberg data lake.
@@ -9,7 +21,7 @@ This project demonstrates an AI-powered analytics platform using Apache Iceberg,
 *   Maven
 
 > [!WARNING] NOT FOR PRODUCTION USE
-> 
+>
 > This project is for experimentation and prototyping. It bundles a spark master node inside of a Spring Boot project.
 > A production Iceberg/Spark project would have a separate Spark system with master and worker nodes, and of course use
 > authentication for the various services running in docker.
