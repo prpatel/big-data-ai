@@ -1,13 +1,18 @@
-# Single compose file that runs identically locally and on Hugging Face Spaces.
+# Local development stack.
+#
+# NOTE: Hugging Face Spaces does NOT read this file. With `sdk: docker` it builds the
+# repo's Dockerfile and runs exactly one container, so on Spaces the app, Postgres,
+# MinIO and LakeKeeper all run inside that single container (see docker-entrypoint.sh).
+# This file is what gives you the same services as separate containers locally.
 #
 # Every piece of persistent state (MinIO objects, Postgres, the app's downloaded
 # CSV data) lives under a single "data root". That root is selected by DATA_ROOT
 # and defaults to ./data locally:
 #
 #   - Locally    -> ./data  (project-relative, survives `docker compose down`)
-#   - HF Spaces  -> /data   (the persistent storage volume HF mounts into every
-#                            container in the Space) — set DATA_ROOT=/data as a
-#                            Space variable, or pass it as a build/run env var.
+#   - HF Spaces  -> /data   (the persistent storage volume; docker-entrypoint.sh
+#                            already defaults DATA_ROOT to it, and it is runtime-only,
+#                            never available during the Docker build)
 #
 # You can force a location at any time with:
 #   DATA_ROOT=/some/path docker compose up -d
@@ -112,13 +117,17 @@ services:
       - ${DATA_ROOT:-./data}:/app/data
     environment:
       - HF_TOKEN=${HF_TOKEN}
+      # The services below are already running as sibling containers, so the image's
+      # entrypoint must not start its own copies - it just execs the jar. The app then
+      # falls back to the compose service names baked into application.properties.
+      - EMBEDDED_SERVICES=0
     depends_on:
       lakekeeper:
         condition: service_healthy
       minio:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:7860/"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:7860/"]
       interval: 15s
       timeout: 5s
       retries: 5

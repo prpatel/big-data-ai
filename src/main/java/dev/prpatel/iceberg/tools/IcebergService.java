@@ -12,6 +12,7 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -45,6 +46,14 @@ import java.util.stream.Collectors;
 public class IcebergService {
 
     private final SparkSession spark;
+
+    // Defaults are the docker compose service names. When the whole stack runs inside a
+    // single container (Hugging Face Spaces), the entrypoint overrides these with localhost.
+    @Value("${app.catalog.base-url:http://lakekeeper:8181}")
+    private String catalogBaseUrl;
+
+    @Value("${app.s3.endpoint:http://minio:9000}")
+    private String s3Endpoint;
 
     @Autowired
     public IcebergService(SparkSession spark) {
@@ -193,7 +202,7 @@ public class IcebergService {
 
     public void setup() {
         S3Client s3 = S3Client.builder()
-                .endpointOverride(URI.create("http://minio:9000"))
+                .endpointOverride(URI.create(s3Endpoint))
                 .region(Region.US_EAST_1)
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("minio", "minio1234")))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
@@ -205,7 +214,7 @@ public class IcebergService {
 
         System.out.println("Bootstrapping project...");
         HttpClient client = HttpClient.newHttpClient();
-        String baseUrl = "http://lakekeeper:8181";
+        String baseUrl = catalogBaseUrl;
 
         try {
             bootstrapProject(client, baseUrl);
@@ -220,7 +229,7 @@ public class IcebergService {
 
         System.out.println("Creating warehouse...");
         try {
-            createWarehouse(client, baseUrl, "warehouse");
+            createWarehouse(client, baseUrl, "warehouse", s3Endpoint);
             System.out.println("✅ Warehouse created successfully");
         } catch (Exception e) {
             if (e.getMessage().contains("400")) {
@@ -341,7 +350,7 @@ public class IcebergService {
 
     // Note: This interacts with the LakeKeeper Management API, not the Iceberg REST Catalog Protocol.
     // Therefore, we use HttpClient instead of RESTCatalog.
-    public static void createWarehouse(HttpClient client, String baseUrl, String storageBucket) throws Exception {
+    public static void createWarehouse(HttpClient client, String baseUrl, String storageBucket, String s3Endpoint) throws Exception {
         String payload = """
             {
                 "warehouse-name": "lakehouse",
@@ -350,7 +359,7 @@ public class IcebergService {
                     "type": "s3",
                     "bucket": "%s",
                     "assume-role-arn": null,
-                    "endpoint": "http://minio:9000",
+                    "endpoint": "%s",
                     "region": "us-east-1",
                     "path-style-access": true,
                     "flavor": "minio",
@@ -363,7 +372,7 @@ public class IcebergService {
                     "aws-secret-access-key": "minio1234"
                 }
             }
-            """.formatted(storageBucket);
+            """.formatted(storageBucket, s3Endpoint);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/management/v1/warehouse"))

@@ -28,33 +28,94 @@ This project demonstrates an AI-powered analytics platform using Apache Iceberg,
 
 ## Getting Started
 
-### 1. Start Infrastructure
+### 1. Build and run
 
-Start the required services (LakeKeeper, MinIO, etc.) using Docker Compose:
+The image is self-contained: it builds the Spring Boot jar from source and also carries
+Postgres, MinIO and LakeKeeper, which `docker-entrypoint.sh` starts in dependency order.
+One build, one container, no compose needed.
 
 ```bash
-docker compose up -d --build
+docker build -t big-data-ai-app .
+
+docker run -d --name big-data-ai \
+  -p 7860:7860 -p 8181:8181 -p 9000:9000 -p 9001:9001 \
+  -v "$PWD/data":/data \
+  --env-file .env \
+  big-data-ai-app
 ```
 
-This builds the app image from source (no pre-built jar needed) and brings up the full stack.
+| Port | Service |
+|------|---------|
+| 7860 | The app (`/` and `/admin`) — the only port Hugging Face Spaces publishes |
+| 8181 | LakeKeeper (Iceberg REST catalog) |
+| 9000 | MinIO API |
+| 9001 | MinIO console (`minio` / `minio1234`) |
 
-## Docker Compose & Data Persistence
+Publish only what you need — the services listen inside the container regardless.
 
-The whole stack runs from a single `compose.yaml`, both locally and on Hugging Face Spaces.
+Useful runtime switches:
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `DATA_ROOT` | `/data` | Where all persistent state lives |
+| `EMBEDDED_SERVICES` | `1` | Set to `0` to run only the app and rely on external services |
+
+`compose.yaml` still exists and runs the same services as separate containers if you
+prefer that topology. It is also where **Trino** lives (port 9999, configured by
+`images/trino/lakekeeper.properties`) — the image deliberately does not bundle it, since
+nothing in the app talks to it and Spaces would not be able to reach it anyway. Bring it
+back with `docker compose up -d trino` when you want ad-hoc SQL over the warehouse. Note
+`compose.kafka.yaml` includes `compose.yaml`, so do not delete the file.
+
+## Deployment Topologies
+
+The same services run in two different shapes depending on where the app is deployed.
+
+**Locally**, `compose.yaml` runs each service as its own container, and they reach each
+other by compose service name (`lakekeeper:8181`, `minio:9000`).
+
+**On Hugging Face Spaces**, `compose.yaml` is never read. A Space with `sdk: docker`
+builds the repo's `Dockerfile` and runs **exactly one container** — there is no compose
+orchestration and no multi-container network. So the runtime image also carries Postgres,
+MinIO and LakeKeeper, and `docker-entrypoint.sh` starts them in dependency order before
+handing off to the app. They talk over loopback (`127.0.0.1:8181`, `127.0.0.1:9000`).
+
+Trino is not in the image. Spaces publishes only `app_port`, so a bundled Trino would run
+unreachable while costing ~1.2GB of image and ~1.5GB of RAM; it stays a compose-only
+service instead.
+This is the pattern the [HF Docker Spaces docs](https://huggingface.co/docs/hub/en/spaces-sdks-docker)
+describe: extra services are installed *inside* the Space, and only `app_port` (7860) is
+published publicly — Postgres, MinIO and LakeKeeper stay container-internal.
+
+The endpoints are configuration, not hardcoded (`app.catalog.uri`, `app.catalog.base-url`,
+`app.s3.endpoint` in `application.properties`). The defaults are the compose service names,
+so local development needs no extra setup; the entrypoint exports the `APP_*` environment
+overrides when it runs the embedded stack. Which mode the image uses is decided by
+`EMBEDDED_SERVICES`, which defaults to `1` and is set to `0` by the compose `app` service.
+
+Because the Space runs everything in one container, note that the app URL is the Space's
+own subdomain, not the Hub page. `https://huggingface.co/spaces/<owner>/<name>` is a Hub
+wrapper that embeds the app in an iframe and does not proxy sub-paths, so `/admin` there
+404s. Use `https://<owner>-<name>.hf.space/admin` instead (for a private Space, in a
+browser logged into Hugging Face).
+
+## Data Persistence
 
 Every piece of persistent state lives under one **data root**:
 
 | Component | Persistent data | Local path | HF Spaces path |
 |-----------|-----------------|------------|----------------|
-| App (downloaded CSVs) | `data/house_prices/` | `./data/house_prices/` | `/data/house_prices/` |
+| App (downloaded CSVs) | `data/house_prices/` | `./data/house_prices/` | `/data/app/house_prices/` |
 | MinIO (Iceberg objects) | MinIO volume | `./data/minio/` | `/data/minio/` |
 | Postgres (catalog metadata) | PG data | `./data/postgres/` | `/data/postgres/` |
 
 - **Locally** it defaults to `./data` in the project directory, so `docker compose down`
   (or removing containers) does **not** wipe your large downloads or the MinIO/Postgres state.
-- **On Hugging Face Spaces** set the Space environment variable `DATA_ROOT=/data`
-  (the persistent volume HF mounts into every container). All bind mounts then resolve
-  under `/data` automatically.
+- **On Hugging Face Spaces** it defaults to `/data`, the persistent storage volume, which
+  requires persistent storage to be attached to the Space. That volume is runtime-only and
+  is not available during the Docker build. If it is missing or unwritable the entrypoint
+  logs a warning and falls back to `/app/localdata`, so the Space still boots — but all
+  state is then lost on every restart.
 - You can override the location at any time:
   ```bash
   DATA_ROOT=/some/path docker compose up -d
@@ -97,6 +158,7 @@ The application will be available at `http://localhost:7860/`.
 Before you can query data, you need to set up the environment and load data. You can do this via the Admin interface.
 
 1.  Navigate to the **Admin Page**: `http://localhost:7860/admin`
+    (on Hugging Face Spaces: `https://<owner>-<name>.hf.space/admin`)
 
 2.  **Bootstrap Iceberg Catalog (LakeKeeper)**:
     *   The application attempts to bootstrap the project and create the warehouse bucket on startup.
@@ -133,6 +195,8 @@ Before you can query data, you need to set up the environment and load data. You
 *   **Apache Iceberg**: Open table format for huge analytic datasets.
 *   **LakeKeeper**: Iceberg REST Catalog server.
 *   **MinIO**: S3-compatible object storage.
+*   **Trino**: Ad-hoc SQL engine over the same Iceberg catalog, available via
+    `compose.yaml` only (port 9999). Nothing in the app talks to it.
 
 ## Controllers
 

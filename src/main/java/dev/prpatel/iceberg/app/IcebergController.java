@@ -8,6 +8,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -23,9 +24,12 @@ public class IcebergController {
     @Autowired
     private SparkSession spark;
 
+    @Value("${app.catalog.uri:http://lakekeeper:8181/catalog}")
+    private String catalogUri;
+
     @GetMapping("/getCatalog")
     public String getCatalog() {
-        System.out.printf("Connecting to Lakekeeper running on lakekeeper:8181\n");
+        System.out.printf("Connecting to Lakekeeper catalog at %s%n", catalogUri);
 
         StringBuilder sb = new StringBuilder("<pre>");
         try (RESTCatalog catalog = new RESTCatalog()) {
@@ -33,7 +37,7 @@ public class IcebergController {
             // 2. Set the configuration properties for the catalog
             Map<String, String> properties = new HashMap<>();
             // Lakekeeper URL running in docker
-            properties.put("uri", "http://lakekeeper:8181/catalog");
+            properties.put("uri", catalogUri);
             // This is the name of the warehouse name created in Lakekeeper
             properties.put("warehouse", "lakehouse");
             // Add any necessary credential properties here, e.g.:
