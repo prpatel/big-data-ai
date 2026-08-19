@@ -87,6 +87,19 @@ if [[ ! -s "${PGDATA}/PG_VERSION" ]]; then
     "${PGBIN}/initdb" -U postgres --auth=trust -E UTF8 >/dev/null
 fi
 
+# Postgres refuses to start unless PGDATA is exactly 0700 or 0750, and not every
+# persistent volume preserves the mode initdb set - Hugging Face Spaces' /data comes
+# back group/world-readable after a restart, which strands the cluster. Re-apply the
+# mode on every boot rather than trusting what is on disk.
+chmod 0700 "${PGDATA}" 2>/dev/null || true
+pgdata_mode="$(stat -c %a "${PGDATA}")"
+if [[ "${pgdata_mode}" != "700" && "${pgdata_mode}" != "750" ]]; then
+    echo "[init] ERROR: ${PGDATA} is mode ${pgdata_mode} and could not be changed to 0700." >&2
+    echo "[init] ERROR: Postgres will not start on this volume. If it cannot hold POSIX" >&2
+    echo "[init] ERROR: modes, point DATA_ROOT at storage that can." >&2
+    exit 1
+fi
+
 run_tagged postgres "${PGBIN}/postgres" \
     -D "${PGDATA}" \
     -p "${PGPORT}" \
