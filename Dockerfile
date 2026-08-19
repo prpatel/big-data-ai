@@ -32,9 +32,11 @@ RUN apt-get update \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Static Go binaries, so copying them out of the official image is enough.
-COPY --from=minio/minio /usr/bin/minio /usr/local/bin/minio
-COPY --from=minio/minio /usr/bin/mc    /usr/local/bin/mc
+# Static Go binaries, so copying them out of the official image is enough. Pinned to a
+# release rather than :latest so an upstream push cannot silently invalidate this layer
+# and everything built below it. compose.yaml uses the same tag.
+COPY --from=minio/minio:RELEASE.2025-09-07T16-13-09Z /usr/bin/minio /usr/local/bin/minio
+COPY --from=minio/minio:RELEASE.2025-09-07T16-13-09Z /usr/bin/mc    /usr/local/bin/mc
 
 # Pinned to the same version compose uses.
 COPY --from=quay.io/lakekeeper/catalog:v0.10.2 /home/nonroot/lakekeeper /usr/local/bin/lakekeeper
