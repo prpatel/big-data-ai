@@ -21,7 +21,46 @@ This project demonstrates an AI-powered analytics platform using Apache Iceberg,
 Start the required services (LakeKeeper, MinIO, etc.) using Docker Compose:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
+```
+
+This builds the app image from source (no pre-built jar needed) and brings up the full stack.
+
+## Docker Compose & Data Persistence
+
+The whole stack runs from a single `compose.yaml`, both locally and on Hugging Face Spaces.
+
+Every piece of persistent state lives under one **data root**:
+
+| Component | Persistent data | Local path | HF Spaces path |
+|-----------|-----------------|------------|----------------|
+| App (downloaded CSVs) | `data/house_prices/` | `./data/house_prices/` | `/data/house_prices/` |
+| MinIO (Iceberg objects) | MinIO volume | `./data/minio/` | `/data/minio/` |
+| Postgres (catalog metadata) | PG data | `./data/postgres/` | `/data/postgres/` |
+
+- **Locally** it defaults to `./data` in the project directory, so `docker compose down`
+  (or removing containers) does **not** wipe your large downloads or the MinIO/Postgres state.
+- **On Hugging Face Spaces** set the Space environment variable `DATA_ROOT=/data`
+  (the persistent volume HF mounts into every container). All bind mounts then resolve
+  under `/data` automatically.
+- You can override the location at any time:
+  ```bash
+  DATA_ROOT=/some/path docker compose up -d
+  ```
+
+To expose the main app on HF Spaces, set `app_port: 8888` in the Space README metadata
+(the default is `7860`):
+
+```yaml
+---
+title: Big Data AI
+emoji: 🏠
+colorFrom: blue
+colorTo: red
+sdk: docker
+app_port: 8888
+pinned: false
+---
 ```
 
 ### 2. Configure LLM (Ollama)

@@ -33,7 +33,9 @@ build/
 .vscode/
 
 ### Data ###
-data/house_prices/
+# Local persistent data root (downloaded CSVs, MinIO objects, Postgres state).
+# Created automatically by the compose bind mounts on first `docker compose up`.
+data/
 
 .DS_Store
 

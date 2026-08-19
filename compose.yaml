@@ -1,30 +1,22 @@
+# Single compose file that runs identically locally and on Hugging Face Spaces.
+#
+# Every piece of persistent state (MinIO objects, Postgres, the app's downloaded
+# CSV data) lives under a single "data root". That root is selected by DATA_ROOT
+# and defaults to ./data locally:
+#
+#   - Locally    -> ./data  (project-relative, survives `docker compose down`)
+#   - HF Spaces  -> /data   (the persistent storage volume HF mounts into every
+#                            container in the Space) — set DATA_ROOT=/data as a
+#                            Space variable, or pass it as a build/run env var.
+#
+# You can force a location at any time with:
+#   DATA_ROOT=/some/path docker compose up -d
+#
+# On Hugging Face Spaces the main app is reachable at the port declared as
+# `app_port` in the Space README (default 7860). The Spring app listens on 8888,
+# so set `app_port: 8888` in the README metadata (see README.md).
+
 services:
-  jupyter:
-    build:
-      context: images/jupyter
-    command:
-      - "jupyter"
-      - "lab"
-      - "--ip"
-      - "0.0.0.0"
-      - "--port"
-      - "8080"
-      - "--notebook-dir"
-      - "/app/notebooks"
-      - "--IdentityProvider.token=''"
-      - "--ServerApp.password=''"
-      - "--no-browser"
-    healthcheck:
-      test: ["CMD", "curl", "localhost:8080/api"]
-      interval: 30s
-      timeout: 10s
-      retries: 2
-      start_period: 15s
-    volumes:
-      - ./notebooks:/app/notebooks
-      - ./data:/app/notebooks/data
-    ports:
-      - "8080:8080"
   minio:
     image: minio/minio
     ports:
@@ -39,7 +31,7 @@ services:
       - --console-address
       - ":9001"
     volumes:
-      - minio:/data
+      - ${DATA_ROOT:-./data}/minio:/data
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 2s
@@ -53,7 +45,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db:/var/lib/postgresql/data
+      - ${DATA_ROOT:-./data}/postgres:/var/lib/postgresql
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres -p 5432 -d postgres" ]
       interval: 2s
@@ -111,9 +103,13 @@ services:
     ports:
       - "9999:8080"
   app:
+    build:
+      context: .
     image: big-data-ai-app
     ports:
       - "8888:8888"
+    volumes:
+      - ${DATA_ROOT:-./data}:/app/data
     environment:
       - HF_TOKEN=${HF_TOKEN}
     depends_on:
@@ -127,7 +123,3 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-volumes:
-  minio:
-  nessie:
-  db:
