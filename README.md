@@ -48,20 +48,9 @@ Every piece of persistent state lives under one **data root**:
   DATA_ROOT=/some/path docker compose up -d
   ```
 
-To expose the main app on HF Spaces, set `app_port: 8888` in the Space README metadata
-(the default is `7860`):
-
-```yaml
----
-title: Big Data AI
-emoji: 🏠
-colorFrom: blue
-colorTo: red
-sdk: docker
-app_port: 8888
-pinned: false
----
-```
+The main app listens on **7860**, which is also Hugging Face Spaces' default
+`app_port`, so the Space routes external traffic to it with no extra README config.
+No `app_port` override is needed.
 
 ### 2. Configure LLM (Ollama)
 
@@ -81,7 +70,7 @@ spring.ai.ollama.chat.model=qwen3-coder:latest
 
 ### 3. Run the Application
 
-This app is configured to run Spring Boot on port 8888
+This app is configured to run Spring Boot on port 7860
 
 Run the Spring Boot application:
 
@@ -89,13 +78,13 @@ Run the Spring Boot application:
 mvn spring-boot:run
 ```
 
-The application will be available at `http://localhost:8888/`.
+The application will be available at `http://localhost:7860/`.
 
 ## Setup & Data Loading
 
 Before you can query data, you need to set up the environment and load data. You can do this via the Admin interface.
 
-1.  Navigate to the **Admin Page**: `http://localhost:8888/admin`
+1.  Navigate to the **Admin Page**: `http://localhost:7860/admin`
 
 2.  **Bootstrap Iceberg Catalog (LakeKeeper)**:
     *   The application attempts to bootstrap the project and create the warehouse bucket on startup.

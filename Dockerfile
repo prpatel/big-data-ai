@@ -18,7 +18,7 @@ WORKDIR /app
 
 COPY --from=build /build/target/big-data-ai-0.0.1-SNAPSHOT.jar app.jar
 
-EXPOSE 8888
+EXPOSE 7860
 
 # Spark on Java 21 needs these JDK internals opened up
 ENTRYPOINT ["java", \

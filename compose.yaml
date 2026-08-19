@@ -13,8 +13,8 @@
 #   DATA_ROOT=/some/path docker compose up -d
 #
 # On Hugging Face Spaces the main app is reachable at the port declared as
-# `app_port` in the Space README (default 7860). The Spring app listens on 8888,
-# so set `app_port: 8888` in the README metadata (see README.md).
+# `app_port` in the Space README. The Spring app listens on 7860, which is also
+# HF's default app_port, so no extra README config is needed (see README.md).
 
 services:
   minio:
@@ -107,7 +107,7 @@ services:
       context: .
     image: big-data-ai-app
     ports:
-      - "8888:8888"
+      - "7860:7860"
     volumes:
       - ${DATA_ROOT:-./data}:/app/data
     environment:
@@ -118,7 +118,7 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8888/"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:7860/"]
       interval: 15s
       timeout: 5s
       retries: 5
