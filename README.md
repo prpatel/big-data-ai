@@ -58,6 +58,7 @@ Useful runtime switches:
 | Variable | Default | Effect |
 |----------|---------|--------|
 | `DATA_ROOT` | `/data` | Where all persistent state lives |
+| `PG_DUMP_INTERVAL` | `60` | Seconds between catalog dumps to `DATA_ROOT`. A dump is also taken on shutdown |
 | `EMBEDDED_SERVICES` | `1` | Set to `0` to run only the app and rely on external services |
 
 `compose.yaml` still exists and runs the same services as separate containers if you
@@ -67,30 +68,40 @@ nothing in the app talks to it and Spaces would not be able to reach it anyway. 
 back with `docker compose up -d trino` when you want ad-hoc SQL over the warehouse. Note
 `compose.kafka.yaml` includes `compose.yaml`, so do not delete the file.
 
-## Storage caveat on Hugging Face Spaces
+## Storage on Hugging Face Spaces
 
-A Space's `/data` is object-backed, not a POSIX block volume. Two consequences that
-`docker-entrypoint.sh` works around at every boot:
+A Space's `/data` is object-backed, not a POSIX block volume, and it is the only durable
+storage Spaces offers - the container's own disk is wiped on every restart. Object storage
+does not preserve file modes, does not store empty directories, and cannot promise a
+durable `fsync` or an atomic rename.
 
-- **File modes are not preserved.** `initdb` sets `PGDATA` to `0700`; it comes back
-  group/world-readable, and Postgres refuses to start on anything but `0700`/`0750`.
-  The entrypoint re-applies the mode.
-- **Empty directories do not survive.** An object store has keys, not directories. A
-  cleanly shut down Postgres leaves fourteen empty directories inside `PGDATA`
-  (`pg_notify`, `pg_wal/archive_status`, `pg_logical/*`, ...), and the server dies on
-  the first one it opens. The entrypoint recreates them.
+Postgres depends on all of those, so **the cluster does not live on `/data`.** It is
+created fresh on the container filesystem at `/app/pgdata` on every boot, where those
+guarantees are real. Durability comes from `pg_dump` instead:
 
-> [!WARNING]
-> These workarounds make Postgres *survive* this storage; they do not make the storage
-> *suitable* for it. Postgres assumes durable `fsync`, atomic rename and working file
-> locking, and an object-backed mount guarantees none of them. A hard kill mid-write can
-> leave a corrupt cluster. That is an acceptable trade for a demo whose data can be
-> reloaded from `/admin` in a couple of minutes; it would not be for anything you care
-> about. The durable fix is to keep `PGDATA` on the container's own filesystem and
-> persist only a periodic `pg_dump` to `/data` - the catalog metadata is small.
+- Every `PG_DUMP_INTERVAL` seconds (default 60) the catalog is dumped to a scratch file
+  and copied to `${DATA_ROOT}/lakekeeper-catalog.sql` **only if it changed** - a single
+  sequential whole-file write, which is what object storage is good at.
+- A final dump is taken on `SIGTERM`, so a normal restart loses nothing rather than up to
+  an interval's worth of changes.
+- At boot the dump is restored into the fresh cluster, then `lakekeeper migrate` runs, so
+  a dump taken against an older LakeKeeper is brought up to the current schema.
 
-MinIO's objects and the downloaded CSVs are far less demanding than a database and sit on
-the same volume without special handling.
+The catalog is metadata only - on the order of 100KB - so this is cheap. The Iceberg data
+files themselves live in MinIO and are never dumped.
+
+`LAKEKEEPER__PG_ENCRYPTION_KEY` must stay stable across restores: LakeKeeper encrypts
+stored credentials with it, and a restored dump carries ciphertext written under whatever
+key was in force when it was taken.
+
+### Migrating from the older in-place layout
+
+Earlier versions kept the cluster on `/data` directly. On first boot the entrypoint
+detects such a cluster, repairs it just enough to start (re-applying `0700` and recreating
+the empty directories the object store dropped), dumps it, and renames it to
+`postgres.migrated`. This runs once. The rename is kept rather than deleted so the old
+cluster remains available if the dump turns out to be unusable - delete
+`${DATA_ROOT}/postgres.migrated` yourself once you are satisfied.
 
 ## Deployment Topologies
 
@@ -132,10 +143,14 @@ Every piece of persistent state lives under one **data root**:
 |-----------|-----------------|------------|----------------|
 | App (downloaded CSVs) | `data/house_prices/` | `./data/house_prices/` | `/data/app/house_prices/` |
 | MinIO (Iceberg objects) | MinIO volume | `./data/minio/` | `/data/minio/` |
-| Postgres (catalog metadata) | PG data | `./data/postgres/` | `/data/postgres/` |
+| LakeKeeper catalog | `pg_dump` of the metadata | `./data/lakekeeper-catalog.sql` | `/data/lakekeeper-catalog.sql` |
+
+The Postgres cluster itself is **not** in this table: it is recreated on the container
+filesystem at every boot and rebuilt from the dump above. See
+[Storage on Hugging Face Spaces](#storage-on-hugging-face-spaces) for why.
 
 - **Locally** it defaults to `./data` in the project directory, so `docker compose down`
-  (or removing containers) does **not** wipe your large downloads or the MinIO/Postgres state.
+  (or removing containers) does **not** wipe your large downloads or the MinIO state.
 - **On Hugging Face Spaces** it defaults to `/data`, the persistent storage volume, which
   requires persistent storage to be attached to the Space. That volume is runtime-only and
   is not available during the Docker build. If it is missing or unwritable the entrypoint
