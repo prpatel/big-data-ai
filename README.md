@@ -16,9 +16,9 @@ This project demonstrates an AI-powered analytics platform using Apache Iceberg,
 
 ## Prerequisites
 
-*   Java 21
-*   Docker & Docker Compose
-*   Maven
+*   Docker
+*   Java 21 and Maven — only if you want to run the app from source; the image builds
+    the jar itself
 
 > [!WARNING] NOT FOR PRODUCTION USE
 >
@@ -28,7 +28,32 @@ This project demonstrates an AI-powered analytics platform using Apache Iceberg,
 
 ## Getting Started
 
-### 1. Build and run
+### 1. Configure credentials
+
+Query generation calls an OpenAI-compatible chat endpoint. Out of the box that is
+Hugging Face Inference Providers, which needs a token in `.env`:
+
+```bash
+HF_TOKEN=hf_...
+```
+
+The endpoint itself is set in `src/main/resources/application.properties`:
+
+| Property | Value |
+|----------|-------|
+| `spring.ai.openai.base-url` | `https://router.huggingface.co/v1` |
+| `spring.ai.openai.chat.model` | `Qwen/Qwen3.6-27B:ovhcloud` |
+| `spring.ai.openai.chat.custom-headers.X-HF-Bill-To` | `pratik-org` |
+
+That file also carries a commented-out block for a local OpenAI-compatible inference
+server. To use it, move the comment markers for the **whole block**, not just the
+base-url: the two servers take different thinking parameters, and the HF router returns
+400 if it is sent the local server's. The `X-HF-Bill-To` header is HF-specific as well.
+
+Without a working endpoint the app still starts and everything except **Generate Query**
+works.
+
+### 2. Build and run
 
 The image is self-contained: it builds the Spring Boot jar from source and also carries
 Postgres, MinIO and LakeKeeper, which `docker-entrypoint.sh` starts in dependency order.
@@ -50,6 +75,7 @@ docker run -d --name big-data-ai \
 | 8181 | LakeKeeper (Iceberg REST catalog) |
 | 9000 | MinIO API |
 | 9001 | MinIO console (`minio` / `minio1234`) |
+| 5432 | Postgres (LakeKeeper's metadata store) |
 
 Publish only what you need — the services listen inside the container regardless.
 
@@ -60,6 +86,9 @@ Useful runtime switches:
 | `DATA_ROOT` | `/data` | Where all persistent state lives |
 | `PG_DUMP_INTERVAL` | `60` | Seconds between catalog dumps to `DATA_ROOT`. A dump is also taken on shutdown |
 | `EMBEDDED_SERVICES` | `1` | Set to `0` to run only the app and rely on external services |
+| `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD` | `minio` / `minio1234` | MinIO credentials. The app's own S3 credentials are still hardcoded, so changing these alone will break `Setup Environment` |
+| `APP_CATALOG_URI`, `APP_CATALOG_BASE_URL`, `APP_S3_ENDPOINT` | loopback | Point the app at services elsewhere. Set by the entrypoint for the embedded stack; anything already in the environment wins |
+| `LAKEKEEPER__METRICS_PORT` | `9191` | Moved off its default of 9000, which collides with MinIO inside one container |
 
 `compose.yaml` still exists and runs the same services as separate containers if you
 prefer that topology. It is also where **Trino** lives (port 9999, configured by
@@ -116,12 +145,13 @@ orchestration and no multi-container network. So the runtime image also carries 
 MinIO and LakeKeeper, and `docker-entrypoint.sh` starts them in dependency order before
 handing off to the app. They talk over loopback (`127.0.0.1:8181`, `127.0.0.1:9000`).
 
-Trino is not in the image. Spaces publishes only `app_port`, so a bundled Trino would run
-unreachable while costing ~1.2GB of image and ~1.5GB of RAM; it stays a compose-only
-service instead.
 This is the pattern the [HF Docker Spaces docs](https://huggingface.co/docs/hub/en/spaces-sdks-docker)
 describe: extra services are installed *inside* the Space, and only `app_port` (7860) is
 published publicly — Postgres, MinIO and LakeKeeper stay container-internal.
+
+Trino is not in the image. Spaces publishes only `app_port`, so a bundled Trino would run
+unreachable while costing ~1.2GB of image and ~1.5GB of RAM; it stays a compose-only
+service instead.
 
 The endpoints are configuration, not hardcoded (`app.catalog.uri`, `app.catalog.base-url`,
 `app.s3.endpoint` in `application.properties`). The defaults are the compose service names,
@@ -137,61 +167,61 @@ browser logged into Hugging Face).
 
 ## Data Persistence
 
-Every piece of persistent state lives under one **data root**:
+Every piece of persistent state lives under one **data root**, laid out like this:
 
-| Component | Persistent data | Local path | HF Spaces path |
-|-----------|-----------------|------------|----------------|
-| App (downloaded CSVs) | `data/house_prices/` | `./data/house_prices/` | `/data/app/house_prices/` |
-| MinIO (Iceberg objects) | MinIO volume | `./data/minio/` | `/data/minio/` |
-| LakeKeeper catalog | `pg_dump` of the metadata | `./data/lakekeeper-catalog.sql` | `/data/lakekeeper-catalog.sql` |
+| Component | Path under the data root |
+|-----------|--------------------------|
+| Downloaded CSVs | `app/house_prices/` |
+| MinIO (Iceberg objects) | `minio/` |
+| LakeKeeper catalog | `lakekeeper-catalog.sql` |
 
-The Postgres cluster itself is **not** in this table: it is recreated on the container
-filesystem at every boot and rebuilt from the dump above. See
+The Postgres cluster is deliberately **not** in this table: it is recreated on the
+container filesystem at every boot and rebuilt from the dump above. See
 [Storage on Hugging Face Spaces](#storage-on-hugging-face-spaces) for why.
 
-- **Locally** it defaults to `./data` in the project directory, so `docker compose down`
-  (or removing containers) does **not** wipe your large downloads or the MinIO state.
-- **On Hugging Face Spaces** it defaults to `/data`, the persistent storage volume, which
-  requires persistent storage to be attached to the Space. That volume is runtime-only and
-  is not available during the Docker build. If it is missing or unwritable the entrypoint
-  logs a warning and falls back to `/app/localdata`, so the Space still boots — but all
-  state is then lost on every restart.
-- You can override the location at any time:
-  ```bash
-  DATA_ROOT=/some/path docker compose up -d
-  ```
+Where the data root is:
+
+- **Running the container**, `DATA_ROOT` is `/data` inside it, so the root is whatever you
+  bind-mount there. The commands above use `-v "$PWD/data":/data`, putting everything under
+  `./data` in the project — removing the container does not touch it. To keep it elsewhere,
+  change the host side of the mount rather than `DATA_ROOT`.
+- **On Hugging Face Spaces** it is `/data`, which requires a Storage Bucket attached to the
+  Space. That volume exists only at runtime, never during the Docker build. If it is missing
+  or unwritable the entrypoint warns and falls back to `/app/localdata`, so the Space still
+  boots — but all state is then lost on every restart.
+- **Under compose** the app service mounts the data root at `/app/data` instead, so the CSVs
+  sit directly under it (`./data/house_prices/`) rather than in an `app/` subdirectory.
+  `DATA_ROOT=/some/path docker compose up -d` moves the whole root.
 
 The main app listens on **7860**, which is also Hugging Face Spaces' default
 `app_port`, so the Space routes external traffic to it with no extra README config.
 No `app_port` override is needed.
 
-### 2. Configure LLM (Ollama)
+## Running the app from source
 
-This project uses Ollama for the LLM. Ensure you have Ollama running and a model pulled (e.g., `qwen3-coder`).
-
-```bash
-ollama pull qwen3-coder:latest
-```
-
-
-Update `src/main/resources/application.properties` with your Ollama configuration:
-
-```properties
-spring.ai.ollama.base-url=http://localhost:11434
-spring.ai.ollama.chat.model=qwen3-coder:latest
-```
-
-### 3. Run the Application
-
-This app is configured to run Spring Boot on port 7860
-
-Run the Spring Boot application:
+Useful for IDE debugging. The supporting services still come from the container; only the
+Spring app runs on the host. Start the container **without** publishing 7860 so it does not
+clash with the app you are about to run:
 
 ```bash
+docker run -d --name big-data-ai-services \
+  -p 8181:8181 -p 9000:9000 -p 9001:9001 \
+  -v "$PWD/data":/data --env-file .env \
+  big-data-ai-app
+
+APP_CATALOG_URI=http://localhost:8181/catalog \
+APP_CATALOG_BASE_URL=http://localhost:8181 \
+APP_S3_ENDPOINT=http://localhost:9000 \
 mvn spring-boot:run
 ```
 
-The application will be available at `http://localhost:7860/`.
+The three overrides are required: the defaults are the compose service names
+(`lakekeeper:8181`, `minio:9000`), which do not resolve from the host. The app listens on
+**7860**, so it is at `http://localhost:7860/`.
+
+Note the container still runs its own copy of the app internally — there is no
+services-only mode — but with 7860 unpublished nothing reaches it, so it just sits idle
+costing about a gigabyte of RAM.
 
 ## Setup & Data Loading
 
@@ -200,9 +230,12 @@ Before you can query data, you need to set up the environment and load data. You
 1.  Navigate to the **Admin Page**: `http://localhost:7860/admin`
     (on Hugging Face Spaces: `https://<owner>-<name>.hf.space/admin`)
 
-2.  **Bootstrap Iceberg Catalog (LakeKeeper)**:
-    *   The application attempts to bootstrap the project and create the warehouse bucket on startup.
-    *   You can verify the setup in the logs or by checking the MinIO console (`http://localhost:9001`, user: `minio`, pass: `minio1234`).
+2.  **Setup Environment**:
+    *   Click **Setup Environment**. This creates the `warehouse` bucket in MinIO, bootstraps
+        the LakeKeeper project, and registers the warehouse. Nothing happens automatically at
+        startup — this step is required once per fresh data root.
+    *   Verify in the logs, or in the MinIO console (`http://localhost:9001`, user: `minio`,
+        pass: `minio1234`).
 
 3.  **Download Data**:
     *   On the Admin page, use the "Download Data" section.
@@ -230,7 +263,8 @@ Before you can query data, you need to set up the environment and load data. You
 ## Architecture
 
 *   **Spring Boot**: Web application framework.
-*   **Spring AI**: Integration with LLMs (Ollama).
+*   **Spring AI**: LLM integration over an OpenAI-compatible API — Hugging Face Inference
+    Providers by default, or any local OpenAI-compatible server.
 *   **Apache Spark**: Distributed data processing engine used for reading/writing data and executing queries.
 *   **Apache Iceberg**: Open table format for huge analytic datasets.
 *   **LakeKeeper**: Iceberg REST Catalog server.
