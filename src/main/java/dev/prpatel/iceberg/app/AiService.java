@@ -41,14 +41,16 @@ class AiService {
         String systemPrompt = """
                 You are a database query assistant. You are going to take a user's question and construct a
                 Spark SQL query from the question.
-                Don't give me the explanation just give me the query. 
+                Don't give me the explanation just give me the query.
                 I don't want the output to be escaped.
                 The table name is: lakekeeper.housing.staging_prices.
                 Make sure the the query accommodates for case insensitivity.
-                I want to return only the first 10 results.
+
                 The query should only include columns that are in the table. The table has these indicated in the user prompt.
-                
+
                 """;
+
+//I want to return only the first 10 results.
 
         String userPrompt = String.format(
                 "table columns: \n %s \n" +
@@ -71,7 +73,7 @@ class AiService {
 Schema: table {
   1: transaction_id: required string (A reference number which is generated automatically recording each published sale. The number is unique and will change each time a sale is recorded.) (id)
   2: price: required int (Sale price stated on the transfer deed.)
-  3: date_of_transfer: required date (Date when the sale was completed, as stated on the transfer deed.) Date is in YYYY-MM-DD format: YEAR-MONTH-DAY. 
+  3: date_of_transfer: required date (Date when the sale was completed, as stated on the transfer deed.) Date is in YYYY-MM-DD format: YEAR-MONTH-DAY.
   4: postcode: required string (This is the postcode used at the time of the original transaction. Note that postcodes can be reallocated and these changes are not reflected in the Price Paid Dataset.)
   5: property_type: required string (D = Detached, S = Semi-Detached, T = Terraced, F = Flats/Maisonettes, O = Other)
   6: new_property: required string (Indicates the age of the property and applies to all price paid transactions, residential and non-residential. Y = a newly built property, N = an established residential building)
