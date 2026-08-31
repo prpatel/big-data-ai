@@ -48,9 +48,9 @@ class AiService {
 
                 The query should only include columns that are in the table. The table has these indicated in the user prompt.
 
-                The query should always limit the results to at most 10 rows, using a LIMIT clause.
-
                 """;
+
+//I want to return only the first 10 results.
 
         String userPrompt = String.format(
                 "table columns: \n %s \n" +
