@@ -14,9 +14,23 @@ class AiService {
 
 
     private final ChatClient chatClient;
+    private final PromptStore promptStore;
+    private final ModelStore modelStore;
+
+    // Kept so the per-request options below can carry the same settings the defaults do.
+    private final boolean useChatTemplateKwargs;
+    private final String reasoningEffort;
 
     public AiService(ChatClient.Builder chatClientBuilder,
+                     PromptStore promptStore,
+                     ModelStore modelStore,
+                     @Value("${app.ai.reasoning-effort:}") String reasoningEffort,
                      @Value("${app.ai.use-chat-template-kwargs:false}") boolean useChatTemplateKwargs) {
+
+        this.promptStore = promptStore;
+        this.modelStore = modelStore;
+        this.reasoningEffort = reasoningEffort;
+        this.useChatTemplateKwargs = useChatTemplateKwargs;
 
         OpenAiChatOptions.Builder options = OpenAiChatOptions.builder();
 
@@ -37,20 +51,10 @@ class AiService {
     }
     public String generateQuery( String question) {
 
-        // The system prompt sets the context and rules for the AI.
-        String systemPrompt = """
-                You are a database query assistant. You are going to take a user's question and construct a
-                Spark SQL query from the question.
-                Don't give me the explanation just give me the query.
-                I don't want the output to be escaped.
-                The table name is: lakekeeper.housing.staging_prices.
-                Make sure the the query accommodates for case insensitivity.
-
-                The query should only include columns that are in the table. The table has these indicated in the user prompt.
-
-                """;
-
-//I want to return only the first 10 results.
+        // The system prompt sets the context and rules for the AI. It lives outside the code -
+        // see PromptStore - so it can be edited from /admin without a rebuild.
+        String systemPrompt = promptStore.get();
+        System.out.println("system prompt (" + (promptStore.isCustomised() ? "edited" : "packaged default") + "):\n" + systemPrompt);
 
         String userPrompt = String.format(
                 "table columns: \n %s \n" +
@@ -58,15 +62,67 @@ class AiService {
                 fieldsInData, question);
 
         System.out.println(userPrompt);
-        ChatResponse llmResponse = chatClient.prompt()
-                .system(systemPrompt) // Apply the system role
-                .user(userPrompt)     // Provide the user's request
-                .call()
-                .chatResponse();
+
+        // The model is chosen per request rather than pinned at startup, so switching it on the
+        // admin page takes effect immediately. Temperature comes from the client defaults, which
+        // runtime options merge over rather than replace.
+        String model = modelStore.get();
+        OpenAiChatOptions.Builder perRequest = OpenAiChatOptions.builder().model(model);
+        if (reasoningEffort != null && !reasoningEffort.isBlank()) {
+            perRequest.reasoningEffort(reasoningEffort);
+        }
+        if (useChatTemplateKwargs) {
+            perRequest.extraBody(Map.of("chat_template_kwargs", Map.of("enable_thinking", false)));
+        }
+        System.out.println("model: " + model + (modelStore.isCustomised() ? " (chosen on /admin)" : " (from application.properties)"));
+
+        long startedAt = System.currentTimeMillis();
+        ChatResponse llmResponse;
+        try {
+            llmResponse = ask(perRequest, systemPrompt, userPrompt);
+        } catch (RuntimeException e) {
+            // reasoning_effort is not portable. `none` is fine on some providers and returns
+            // 400 "must be one of low, medium, or high" on others, so switching models would
+            // otherwise fail for reasons that have nothing to do with the model. Drop it and
+            // retry once rather than making the user care.
+            if (!mentionsReasoningEffort(e)) {
+                throw e;
+            }
+            System.out.println("note: " + model + " rejected reasoning_effort; retrying without it");
+            OpenAiChatOptions.Builder withoutEffort = OpenAiChatOptions.builder().model(model);
+            if (useChatTemplateKwargs) {
+                withoutEffort.extraBody(Map.of("chat_template_kwargs", Map.of("enable_thinking", false)));
+            }
+            llmResponse = ask(withoutEffort, systemPrompt, userPrompt);
+        }
+        System.out.println("latency: " + (System.currentTimeMillis() - startedAt) + " ms");
         System.out.println("Response metadata: \n"+llmResponse.getResult().getMetadata());
         System.out.println("Response getOutput().getText: \n"+llmResponse.getResult().getOutput().getText());
         System.out.println("Response getOutput().toString: \n"+llmResponse.getResult().getOutput().toString());
         return llmResponse.getResult().getOutput().getText();
+    }
+
+    private ChatResponse ask(OpenAiChatOptions.Builder options, String systemPrompt, String userPrompt) {
+        return chatClient.prompt()
+                .options(options)
+                .system(systemPrompt) // Apply the system role
+                .user(userPrompt)     // Provide the user's request
+                .call()
+                .chatResponse();
+    }
+
+    /** True when a failure is the provider complaining about reasoning_effort, at any depth. */
+    private static boolean mentionsReasoningEffort(Throwable t) {
+        for (Throwable c = t; c != null; c = c.getCause()) {
+            String m = c.getMessage();
+            if (m != null && m.contains("reasoning_effort")) {
+                return true;
+            }
+            if (c.getCause() == c) {
+                break;
+            }
+        }
+        return false;
     }
 
     private final String fieldsInData = """

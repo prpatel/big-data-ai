@@ -20,6 +20,7 @@
                    id="q"
                    name="q"
                    placeholder="Enter in your question here"
+                   value="show me all the properties sold in Oxford in September 2015"
             >
         </section>
 
@@ -49,5 +50,33 @@
     </section>
 
 </main>
+
+<script>
+    // Keep whatever the user typed when they wander off to /admin and come back. The link there
+    // is an ordinary navigation, so the browser reloads this page and the field would otherwise
+    // reset to the example above.
+    //
+    // localStorage rather than anything server-side on purpose: the question is a per-person
+    // convenience, and this app may be one public Space shared by a room - nobody's half-typed
+    // question should show up in someone else's browser.
+    (function () {
+        var KEY = 'bigdataai.question';
+        var q = document.getElementById('q');
+        if (!q) return;
+
+        try {
+            var saved = localStorage.getItem(KEY);
+            // null means a genuine first visit, so the example stays. An empty string means the
+            // user deliberately cleared the box, and that is respected.
+            if (saved !== null) q.value = saved;
+        } catch (e) {
+            // Private windows and blocked site data throw here. The example is a fine fallback.
+        }
+
+        q.addEventListener('input', function () {
+            try { localStorage.setItem(KEY, q.value); } catch (e) { /* not worth failing over */ }
+        });
+    })();
+</script>
 </body>
 </html>

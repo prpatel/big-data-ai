@@ -27,17 +27,6 @@
     </section>
 
     <section>
-        <h2>Clear Data</h2>
-        <p>Remove all data in the iceberg tables.</p>
-        <button hx-post="/admin/clear"
-                hx-trigger="click"
-                hx-target="#clear-result">
-            Clear Data
-        </button>
-        <div id="clear-result"></div>
-    </section>
-
-    <section>
         <h2>Download Data</h2>
         <p>Download data files for a specific year.</p>
         <section>
@@ -72,6 +61,83 @@
         <div id="load-result"></div>
     </section>
 
+    <section>
+        <h2>Clear Data</h2>
+        <p>Remove all data in the iceberg tables.</p>
+        <button hx-post="/admin/clear"
+                hx-trigger="click"
+                hx-target="#clear-result">
+            Clear Data
+        </button>
+        <div id="clear-result"></div>
+    </section>
+
+    <section>
+        <h2>Model Picker</h2>
+        <p>
+            Which model answers the next question. Every option is
+            <code>model-id:provider</code> as understood by the Inference Providers router &mdash;
+            the suffix pins one provider rather than letting the router choose.
+            Active now: <strong th:text="${activeModel}">-</strong>
+            <span th:unless="${modelCustomised}">(from application.properties)</span>
+        </p>
+        <label for="modelSelect">Model</label>
+        <select id="modelSelect" name="model">
+            <option th:each="m : ${modelOptions}"
+                    th:value="${m}" th:text="${m}"
+                    th:selected="${m == activeModel}"></option>
+            <option value="OTHER" th:selected="${modelCustomised and !#lists.contains(modelOptions, activeModel)}">
+                OTHER - paste one below
+            </option>
+        </select>
+        <label for="otherModel">Other (used only when OTHER is selected)</label>
+        <input type="text" id="otherModel" name="otherModel"
+               placeholder="e.g. openai/gpt-oss-120b:cheapest"
+               th:value="${modelCustomised and !#lists.contains(modelOptions, activeModel)} ? ${activeModel} : ''">
+        <small>
+            A bare model id lets the router pick. Suffixes: <code>:fastest</code>,
+            <code>:cheapest</code>, <code>:preferred</code>, or a provider name.
+        </small>
+        <button hx-post="/admin/model"
+                hx-trigger="click"
+                hx-target="#model-result"
+                hx-include="#modelSelect,#otherModel">
+            Use This Model
+        </button>
+        <button class="secondary"
+                hx-post="/admin/model/reset"
+                hx-trigger="click"
+                hx-target="#model-result">
+            Reset to Default
+        </button>
+        <div id="model-result"></div>
+    </section>
+
+    <section>
+        <h2>System Prompt</h2>
+        <p>
+            The instructions sent to the model before every question. Edit and save to change how
+            queries are generated &mdash; it applies to the <em>next</em> question, with no restart
+            and no redeploy.
+            <strong th:if="${promptCustomised}">Currently using an edited prompt.</strong>
+            <span th:unless="${promptCustomised}">Currently using the packaged default.</span>
+        </p>
+        <textarea id="systemPrompt" name="prompt" rows="12"
+                  th:text="${systemPrompt}"></textarea>
+        <button hx-post="/admin/prompt"
+                hx-trigger="click"
+                hx-target="#prompt-result"
+                hx-include="#systemPrompt">
+            Save Prompt
+        </button>
+        <button class="secondary"
+                hx-post="/admin/prompt/reset"
+                hx-trigger="click"
+                hx-target="#prompt-result">
+            Reset to Default
+        </button>
+        <div id="prompt-result"></div>
+    </section>
 </main>
 </body>
 </html>

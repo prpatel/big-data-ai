@@ -16,16 +16,26 @@ import java.util.List;
 class AdminController {
 
     private final IcebergService icebergService;
+    private final PromptStore promptStore;
+    private final ModelStore modelStore;
 
     @Autowired
-    public AdminController(IcebergService icebergService) {
+    public AdminController(IcebergService icebergService, PromptStore promptStore, ModelStore modelStore) {
         this.icebergService = icebergService;
+        this.promptStore = promptStore;
+        this.modelStore = modelStore;
     }
 
     @GetMapping
     public String index(Model model) {
         List<String> files = icebergService.listDownloadedFiles();
         model.addAttribute("files", files);
+        model.addAttribute("systemPrompt", promptStore.get());
+        model.addAttribute("promptCustomised", promptStore.isCustomised());
+        model.addAttribute("modelOptions", modelStore.options());
+        model.addAttribute("activeModel", modelStore.get());
+        model.addAttribute("defaultModel", modelStore.getDefault());
+        model.addAttribute("modelCustomised", modelStore.isCustomised());
         return "admin";
     }
 
@@ -40,6 +50,45 @@ class AdminController {
     public String clear(Model model) {
         icebergService.clear();
         model.addAttribute("message", "Clear operation initiated.");
+        return "admin_result :: result";
+    }
+
+    @PostMapping("/model")
+    public String saveModel(@RequestParam(name = "model", required = false) String model,
+                            @RequestParam(name = "otherModel", required = false) String otherModel,
+                            Model view) {
+        // "OTHER" is the escape hatch in the dropdown; the real value is in the text box next to it.
+        String chosen = "OTHER".equals(model) ? otherModel : model;
+        if ("OTHER".equals(model) && (otherModel == null || otherModel.isBlank())) {
+            view.addAttribute("message", "Pick OTHER and paste a model id, e.g. openai/gpt-oss-120b:cheapest");
+            return "admin_result :: result";
+        }
+        modelStore.save(chosen);
+        view.addAttribute("message", "Now asking " + modelStore.get()
+                + ". Applies to the next question - no restart needed.");
+        return "admin_result :: result";
+    }
+
+    @PostMapping("/model/reset")
+    public String resetModel(Model view) {
+        modelStore.reset();
+        view.addAttribute("message", "Model reset to " + modelStore.getDefault() + ". Reload this page to see it.");
+        return "admin_result :: result";
+    }
+
+    @PostMapping("/prompt")
+    public String savePrompt(@RequestParam(name = "prompt", required = false) String prompt, Model model) {
+        promptStore.save(prompt);
+        model.addAttribute("message", promptStore.isCustomised()
+                ? "System prompt saved. It applies to the next question - no restart needed."
+                : "Prompt was empty, so the packaged default is back in force.");
+        return "admin_result :: result";
+    }
+
+    @PostMapping("/prompt/reset")
+    public String resetPrompt(Model model) {
+        promptStore.reset();
+        model.addAttribute("message", "System prompt reset to the packaged default. Reload this page to see it.");
         return "admin_result :: result";
     }
 
