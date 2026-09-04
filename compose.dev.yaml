@@ -1,0 +1,23 @@
+# Local development overlay. Opt in explicitly:
+#
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d app
+#
+# or export it once per shell and drop the flags:
+#
+#   export COMPOSE_FILE=compose.yaml:compose.dev.yaml
+#
+# It runs the app container from the jar you just built instead of the one baked
+# into the image, so the dev loop is:
+#
+#   mvn -o -q -B -DskipTests package && docker compose restart app
+#
+# Build the jar before the first `up` — a bind mount whose source is missing makes
+# Docker create an empty directory at /app/app.jar.
+services:
+  app:
+    # compose.yaml names an image that only ever exists locally, so without this
+    # compose tries to pull `big-data-ai-app` from Docker Hub and fails with
+    # "pull access denied". Build it instead.
+    pull_policy: build
+    volumes:
+      - ./target/big-data-ai-0.0.1-SNAPSHOT.jar:/app/app.jar:ro
