@@ -33,14 +33,43 @@ waste the venue. Every lab below is scored against both.
 Non-negotiable, and worth a reminder email the night before. Forty minutes of workshop time
 disappears if people arrive cold.
 
-```bash
-# 1. Hugging Face account, then:
-curl -LsSf https://hf.co/cli/install.sh | bash -s
-hf auth login          # paste a WRITE token from hf.co/settings/tokens
+**1. Accept the workshop-org invite first.** Inference bills to the org, and org membership is
+what makes that allowed.
 
-# 2. Confirm
-hf auth whoami
+**2. Create one token, type `write`.** This link preselects the type:
+`https://huggingface.co/settings/tokens/new?tokenType=write`
+
+A `write` token covers all four things the day needs — create a Space, create a bucket, push over
+git, and call Inference Providers. A `read` token cannot create the Space. A fine-grained token needs
+three scopes set correctly and is the usual reason someone is stuck at 9am.
+
+**3. Install the CLI and log in:**
+
+```bash
+curl -LsSf https://hf.co/cli/install.sh | bash -s
+hf auth login --add-to-git-credential     # paste the token; also lets git push
+hf auth whoami                            # should list the workshop org
 ```
+
+**4. Run the pre-flight.** This is the exact call the app makes, billing header included. A
+completion means the day will work; a `403` means the token or the org membership is wrong, and
+there is still time to fix it.
+
+```bash
+curl -s https://router.huggingface.co/v1/chat/completions \
+  -H "Authorization: Bearer $(hf auth token)" \
+  -H "Content-Type: application/json" \
+  -H "X-HF-Bill-To: <workshop-org>" \
+  -d '{"model":"openai/gpt-oss-120b:cheapest",
+       "messages":[{"role":"user","content":"say ok"}]}'
+```
+
+> **Presenter:** `application.properties` sets
+> `spring.ai.openai.chat.custom-headers.X-HF-Bill-To=pratik-org` — change it to your workshop org, or
+> every attendee gets a 403. And if that org is on Team or Enterprise, check two policies: a
+> *fine-grained tokens only* rule rejects the `write` tokens above, and fine-grained tokens scoped to
+> such an org sit in **Pending** until an admin approves them. Your own tokens auto-approve because
+> you are the admin, so **run the pre-flight from a non-admin account**, not from yours.
 
 - A **write** token, and separately a token with **inference** permission (or one fine-grained
   token carrying both — `Make calls to Inference Providers` + write).
