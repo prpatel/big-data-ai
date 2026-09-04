@@ -18,12 +18,15 @@ class AdminController {
     private final IcebergService icebergService;
     private final PromptStore promptStore;
     private final ModelStore modelStore;
+    private final ParquetExporter exporter;
 
     @Autowired
-    public AdminController(IcebergService icebergService, PromptStore promptStore, ModelStore modelStore) {
+    public AdminController(IcebergService icebergService, PromptStore promptStore,
+                           ModelStore modelStore, ParquetExporter exporter) {
         this.icebergService = icebergService;
         this.promptStore = promptStore;
         this.modelStore = modelStore;
+        this.exporter = exporter;
     }
 
     @GetMapping
@@ -36,6 +39,7 @@ class AdminController {
         model.addAttribute("activeModel", modelStore.get());
         model.addAttribute("defaultModel", modelStore.getDefault());
         model.addAttribute("modelCustomised", modelStore.isCustomised());
+        model.addAttribute("exportFiles", exporter.listExport("uk-price-paid"));
         return "admin";
     }
 
@@ -50,6 +54,21 @@ class AdminController {
     public String clear(Model model) {
         icebergService.clear();
         model.addAttribute("message", "Clear operation initiated.");
+        return "admin_result :: result";
+    }
+
+    @PostMapping("/export")
+    public String export(@RequestParam(name = "files", required = false, defaultValue = "8") int files,
+                         Model view) {
+        try {
+            ParquetExporter.Result r = exporter.export(null, "uk-price-paid", files);
+            view.addAttribute("message", String.format(
+                    "Exported %,d rows to %d parquet files (%s) in %s. Reload to see them, then publish with the Job below.",
+                    r.rows(), r.files(), r.humanBytes(), r.path()));
+        } catch (Exception e) {
+            view.addAttribute("message", "Export failed: " + e.getMessage()
+                    + " (is the table loaded? try Load Data first)");
+        }
         return "admin_result :: result";
     }
 

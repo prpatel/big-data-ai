@@ -73,6 +73,33 @@
     </section>
 
     <section>
+        <h2>Export for Publishing</h2>
+        <p>
+            Write the Iceberg table out as plain Parquet, with a dataset card, ready to publish as a
+            Hugging Face dataset. This reads <em>through</em> the table rather than copying the
+            storage layer, so it exports the current snapshot &mdash; not files left behind by
+            earlier ones.
+        </p>
+        <section th:if="${not #lists.isEmpty(exportFiles)}">
+            <h3>Last export</h3>
+            <ul>
+                <li th:each="f : ${exportFiles}" th:text="${f}"></li>
+            </ul>
+        </section>
+        <label for="exportFiles">Number of files</label>
+        <input type="text" id="exportFiles" name="files" value="8"
+               placeholder="8">
+        <small>Fewer, larger files read faster. 8 is a sensible default for a year or two of data.</small>
+        <button hx-post="/admin/export"
+                hx-trigger="click"
+                hx-target="#export-result"
+                hx-include="#exportFiles">
+            Export to Parquet
+        </button>
+        <div id="export-result"></div>
+    </section>
+
+    <section>
         <h2>Model Picker</h2>
         <p>
             Which model answers the next question. Every option is
