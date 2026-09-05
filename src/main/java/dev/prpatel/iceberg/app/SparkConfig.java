@@ -14,11 +14,30 @@ public class SparkConfig {
     @Value("${app.catalog.uri:http://lakekeeper:8181/catalog}")
     private String catalogUri;
 
+    // When these are set, Spark signs its own S3 requests with the given key instead of asking the
+    // catalog to sign each one. LakeKeeper turns on remote signing whenever STS is unavailable, and
+    // the Hugging Face S3 gateway rejects those signed requests - it is happy with ordinary SigV4
+    // from the client, which is what this restores. Empty by default, so MinIO is untouched.
+    @Value("${app.s3.access-key:}")
+    private String s3AccessKey;
+
+    @Value("${app.s3.secret-key:}")
+    private String s3SecretKey;
+
+    @Value("${app.s3.endpoint:}")
+    private String s3Endpoint;
+
+    @Value("${app.s3.region:us-east-1}")
+    private String s3Region;
+
+    @Value("${app.s3.client-side-signing:false}")
+    private boolean clientSideSigning;
+
     @Bean
     public SparkSession sparkSession() {
         SparkSession spark;
 
-        spark = SparkSession.builder()
+        SparkSession.Builder builder = SparkSession.builder()
                 .appName("Display Iceberg Table")
                 .master("local[*]") // Use local mode for this example
                 // Add the Iceberg SQL extensions for full functionality
@@ -30,8 +49,18 @@ public class SparkConfig {
                 // Provide the URI for your LakeKeeper REST endpoint
                 .config("spark.sql.catalog.lakekeeper.uri", catalogUri)
                 // Specify the warehouse name
-                .config("spark.sql.catalog.lakekeeper.warehouse", "lakehouse")
-                .getOrCreate();
+                .config("spark.sql.catalog.lakekeeper.warehouse", "lakehouse");
+
+        if (clientSideSigning) {
+            builder.config("spark.sql.catalog.lakekeeper.s3.remote-signing-enabled", "false")
+                   .config("spark.sql.catalog.lakekeeper.s3.access-key-id", s3AccessKey)
+                   .config("spark.sql.catalog.lakekeeper.s3.secret-access-key", s3SecretKey)
+                   .config("spark.sql.catalog.lakekeeper.s3.endpoint", s3Endpoint)
+                   .config("spark.sql.catalog.lakekeeper.s3.path-style-access", "true")
+                   .config("spark.sql.catalog.lakekeeper.client.region", s3Region);
+        }
+
+        spark = builder.getOrCreate();
 
                 spark.sparkContext().setLogLevel("WARN");
 

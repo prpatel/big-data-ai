@@ -30,6 +30,7 @@
         <java.version>21</java.version>
         <spring-ai.version>2.0.0</spring-ai.version>
         <iceberg.version>1.9.2</iceberg.version>
+        <awssdk.version>2.54.13</awssdk.version>
         <spark.version>3.5.0</spark.version>
         <scala.binary.version>2.12</scala.binary.version>
         <!-- fixes to run spark and spring booth in the same app-->
@@ -135,27 +136,36 @@
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
-            <version>2.25.58</version>
+            <version>${awssdk.version}</version>
+        </dependency>
+
+        <!-- Iceberg's S3FileIO builds an ApacheHttpClient by default. Up to 2.25.x this arrived
+             transitively; from the 2.5x line it has to be asked for explicitly, otherwise every
+             S3 call dies with ClassNotFoundException: ApacheHttpClient$Builder. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>apache-client</artifactId>
+            <version>${awssdk.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>kms</artifactId>
-            <version>2.25.58</version>
+            <version>${awssdk.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>glue</artifactId>
-            <version>2.25.58</version>
+            <version>${awssdk.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>dynamodb</artifactId>
-            <version>2.25.58</version>
+            <version>${awssdk.version}</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
-            <version>2.25.58</version> <!-- Use the latest 2.x version available -->
+            <version>${awssdk.version}</version>
         </dependency>
 
 

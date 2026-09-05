@@ -55,6 +55,45 @@ public class IcebergService {
     @Value("${app.s3.endpoint:http://minio:9000}")
     private String s3Endpoint;
 
+    // Credentials, the bucket and the STS switch are configuration rather than constants so the
+    // same image can run against the bundled MinIO (local) or an object store that already exists
+    // (a Hugging Face bucket through the s3.hf.co gateway, say). The defaults keep compose working
+    // with no extra settings.
+    @Value("${app.s3.access-key:minio}")
+    private String s3AccessKey;
+
+    @Value("${app.s3.secret-key:minio1234}")
+    private String s3SecretKey;
+
+    @Value("${app.s3.bucket:warehouse}")
+    private String s3Bucket;
+
+    @Value("${app.s3.region:us-east-1}")
+    private String s3Region;
+
+    // Everything the warehouse owns is written under this prefix inside the bucket. Empty for
+    // MinIO, where the bucket is ours alone. Needed for the Hugging Face gateway, which cannot be
+    // addressed as https://s3.hf.co/<namespace> - LakeKeeper rejects an endpoint with a path - so
+    // the namespace becomes the S3 "bucket" and the real bucket name becomes this prefix.
+    @Value("${app.s3.key-prefix:}")
+    private String s3KeyPrefix;
+
+    // With a REST catalog the server decides where a table lives, and LakeKeeper rejects an
+    // explicit LOCATION that does not match the warehouse it configured. Naming the location is
+    // only kept for the MinIO setup, where it has always been there; anywhere else, leave it out
+    // and let the catalog place the table under its own prefix.
+    @Value("${app.warehouse.explicit-location:true}")
+    private boolean explicitLocation;
+
+    // The HF gateway has no STS, so it cannot vend temporary credentials - LakeKeeper has to hand
+    // out the access key itself. MinIO does support STS, which is why this defaults to true.
+    @Value("${app.s3.sts-enabled:true}")
+    private boolean s3StsEnabled;
+
+    // An existing bucket (created with `hf buckets create`) must not be created again.
+    @Value("${app.s3.create-bucket:true}")
+    private boolean createBucket;
+
     @Autowired
     public IcebergService(SparkSession spark) {
         this.spark = spark;
@@ -108,8 +147,10 @@ public class IcebergService {
                 record_status STRING COMMENT 'Indicates additions, changes and deletions to the records. A = Addition C = Change D = Delete'
             )
             USING iceberg
-            LOCATION 's3://warehouse/housing/staging'
-        """;
+            %s
+        """.formatted(explicitLocation
+                        ? "LOCATION 's3://" + s3Bucket + "/housing/staging'"
+                        : "");
 
         spark.sql(createTableSql);
 
@@ -201,16 +242,21 @@ public class IcebergService {
     }
 
     public void setup() {
-        S3Client s3 = S3Client.builder()
-                .endpointOverride(URI.create(s3Endpoint))
-                .region(Region.US_EAST_1)
-                .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create("minio", "minio1234")))
-                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
-                .build();
+        if (createBucket) {
+            S3Client s3 = S3Client.builder()
+                    .endpointOverride(URI.create(s3Endpoint))
+                    .region(Region.of(s3Region))
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create(s3AccessKey, s3SecretKey)))
+                    .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+                    .build();
 
-        System.out.println("Creating bucket...");
-        createBucket(s3, "warehouse");
-        System.out.println("✅ Bucket created successfully");
+            System.out.println("Creating bucket...");
+            createBucket(s3, s3Bucket);
+            System.out.println("✅ Bucket created successfully");
+        } else {
+            System.out.println("Skipping bucket creation - using the existing bucket '" + s3Bucket + "'");
+        }
 
         System.out.println("Bootstrapping project...");
         HttpClient client = HttpClient.newHttpClient();
@@ -220,22 +266,30 @@ public class IcebergService {
             bootstrapProject(client, baseUrl);
             System.out.println("✅ Project bootstrapped successfully");
         } catch (Exception e) {
-            if (e.getMessage().contains("400")) {
+            // String.valueOf, not getMessage().contains: a connection failure carries a null
+            // message, and calling contains() on it threw a NullPointerException that replaced
+            // the real cause - which made every failure here look like the same mystery.
+            String message = String.valueOf(e.getMessage());
+            if (message.contains("400")) {
                 System.out.println("Catalog already bootstrapped - skipping...");
             } else {
-                System.err.println("Something went wrong: " + e.getMessage());
+                System.err.println("Something went wrong bootstrapping the catalog: " + e);
             }
         }
 
         System.out.println("Creating warehouse...");
         try {
-            createWarehouse(client, baseUrl, "warehouse", s3Endpoint);
+            createWarehouse(client, baseUrl, s3Bucket, s3Endpoint,
+                    s3AccessKey, s3SecretKey, s3Region, s3StsEnabled, s3KeyPrefix);
             System.out.println("✅ Warehouse created successfully");
         } catch (Exception e) {
-            if (e.getMessage().contains("400")) {
+            String message = String.valueOf(e.getMessage());
+            // A 400 here is not always "already exists" - it is also how an invalid storage
+            // profile comes back - so say what the catalog actually returned either way.
+            if (message.contains("409") || message.contains("already exists")) {
                 System.out.println("Warehouse already exists - skipping...");
             } else {
-                System.err.println("Something went wrong: " + e.getMessage());
+                System.err.println("Could not create the warehouse: " + e);
             }
         }
     }
@@ -350,7 +404,9 @@ public class IcebergService {
 
     // Note: This interacts with the LakeKeeper Management API, not the Iceberg REST Catalog Protocol.
     // Therefore, we use HttpClient instead of RESTCatalog.
-    public static void createWarehouse(HttpClient client, String baseUrl, String storageBucket, String s3Endpoint) throws Exception {
+    public static void createWarehouse(HttpClient client, String baseUrl, String storageBucket,
+                                       String s3Endpoint, String accessKey, String secretKey,
+                                       String region, boolean stsEnabled, String keyPrefix) throws Exception {
         String payload = """
             {
                 "warehouse-name": "lakehouse",
@@ -358,21 +414,23 @@ public class IcebergService {
                 "storage-profile": {
                     "type": "s3",
                     "bucket": "%s",
+                    "key-prefix": "%s",
                     "assume-role-arn": null,
                     "endpoint": "%s",
-                    "region": "us-east-1",
+                    "region": "%s",
                     "path-style-access": true,
-                    "flavor": "minio",
-                    "sts-enabled": true
+                    "flavor": "s3-compat",
+                    "sts-enabled": %s
                 },
                 "storage-credential": {
                     "type": "s3",
                     "credential-type": "access-key",
-                    "aws-access-key-id": "minio",
-                    "aws-secret-access-key": "minio1234"
+                    "aws-access-key-id": "%s",
+                    "aws-secret-access-key": "%s"
                 }
             }
-            """.formatted(storageBucket, s3Endpoint);
+            """.formatted(storageBucket, keyPrefix == null ? "" : keyPrefix,
+                            s3Endpoint, region, stsEnabled, accessKey, secretKey);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/management/v1/warehouse"))
