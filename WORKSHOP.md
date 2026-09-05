@@ -33,47 +33,47 @@ waste the venue. Every lab below is scored against both.
 Non-negotiable, and worth a reminder email the night before. Forty minutes of workshop time
 disappears if people arrive cold.
 
-**1. Accept the workshop-org invite first.** Inference bills to the org, and org membership is
-what makes that allowed.
+**1. Create one token with Full Access.** At
+[hf.co/settings/tokens](https://huggingface.co/settings/tokens): **New token** → type
+**Fine-grained** → name it `workshop` → click the **Full Access** preset → **Create**. Copy it; it is
+shown once.
 
-**2. Create one token, type `write`.** This link preselects the type:
-`https://huggingface.co/settings/tokens/new?tokenType=write`
+Everything the day needs is covered: creating a Space and a bucket, pushing over git, calling
+Inference Providers, starting Jobs, publishing a dataset, and the S3 credentials Lab 3 derives from
+it. There is a minimum set (see the appendix at the end of this file) but do not use it in a
+workshop — a token missing one box authenticates perfectly and then fails with
+`AccessDenied … Unknown`, naming no permission. That is unrecoverable in a room.
 
-A `write` token covers all four things the day needs — create a Space, create a bucket, push over
-git, and call Inference Providers. A `read` token cannot create the Space. A fine-grained token needs
-three scopes set correctly and is the usual reason someone is stuck at 9am.
+Everything lives in the attendee's **own namespace**, so only the *User permissions* section
+matters. No organisation is involved.
 
-**3. Install the CLI and log in:**
+**2. Install the CLI and log in:**
 
 ```bash
 curl -LsSf https://hf.co/cli/install.sh | bash -s
 hf auth login --add-to-git-credential     # paste the token; also lets git push
-hf auth whoami                            # should list the workshop org
+hf auth whoami                            # confirms which account the token belongs to
 ```
 
-**4. Run the pre-flight.** This is the exact call the app makes, billing header included. A
-completion means the day will work; a `403` means the token or the org membership is wrong, and
-there is still time to fix it.
+**3. Run the pre-flight — two calls, and the second is the one that matters.**
 
 ```bash
+# inference works, and the credit is on the account
 curl -s https://router.huggingface.co/v1/chat/completions \
-  -H "Authorization: Bearer $(hf auth token)" \
-  -H "Content-Type: application/json" \
-  -H "X-HF-Bill-To: <workshop-org>" \
+  -H "Authorization: Bearer $(hf auth token)" -H "Content-Type: application/json" \
   -d '{"model":"openai/gpt-oss-120b:cheapest",
        "messages":[{"role":"user","content":"say ok"}]}'
+
+# the token can WRITE - a read check passes with a read-only token and proves nothing
+hf buckets create $(hf auth whoami | grep -o 'user=[^ ]*' | cut -d= -f2)/preflight --private
+hf buckets delete $(hf auth whoami | grep -o 'user=[^ ]*' | cut -d= -f2)/preflight --yes
 ```
 
-> **Presenter:** `application.properties` sets
-> `spring.ai.openai.chat.custom-headers.X-HF-Bill-To=pratik-org` — change it to your workshop org, or
-> every attendee gets a 403. And if that org is on Team or Enterprise, check two policies: a
-> *fine-grained tokens only* rule rejects the `write` tokens above, and fine-grained tokens scoped to
-> such an org sit in **Pending** until an admin approves them. Your own tokens auto-approve because
-> you are the admin, so **run the pre-flight from a non-admin account**, not from yours.
+A completion and a clean create/delete means the day will work. Anything else means there is a week
+to fix it rather than ten minutes.
 
 - A **write** token, and separately a token with **inference** permission (or one fine-grained
   token carrying both — `Make calls to Inference Providers` + write).
-- Accept the invite to the workshop org (you'll send it — see prep below).
 - `git`, an editor, and any HTTP client they like.
 - **No Docker. No Java. No Maven.** The workshop runs entirely on push-to-deploy, deliberately —
   see below.
@@ -94,7 +94,7 @@ Optional but useful: an SSH key added at hf.co/settings/keys (needed for the Dev
 
 | # | Task | Why it matters |
 |---|------|----------------|
-| 1 | **Create a workshop org** and invite attendees | Billing target for Jobs and inference. Free accounts have no credit balance, so `hf jobs run` fails for them unless it bills to an org: `--namespace workshop-org`. Same for the app's `X-HF-Bill-To` header. |
+| 1 | **Get credits onto each attendee's account**, and confirm at least one has landed before the day | Jobs need a positive credit balance, and so does inference past the free tier. Credits on their own account mean no org, no `--namespace`, and no `X-HF-Bill-To` — it all bills to them. Budget ~$2 each; $5 is generous. |
 | 2 | **Decide whether the Space runs on MinIO or on a bucket** | Both work. Bucket-backed means the data is real Parquet on the Hub from minute one, and Lab 3 becomes a demo rather than an exercise; MinIO-backed keeps Lab 3 as a hands-on lab. Either way, hand out the recipe — it is not discoverable. |
 | 3 | Pre-download `pp-2015.csv` into a **public** HF bucket or dataset repo | The Land Registry origin is one shared 170 MB download for the whole room. Serving it from HF is faster *and* demonstrates the point. |
 | 4 | Decide the **fallback venue** for the AI labs | If the venue's egress is bad, inference still works (it's a small API call) but Space builds may not. Have a pre-built Space per attendee as plan B. |
@@ -518,8 +518,8 @@ have them try flipping each:
 
 **What they learn** Provider routing as a real dial (`:fastest` / `:cheapest` / `:preferred` /
 `:provider`); that the biggest model is often the wrong default; that "which model" is an empirical
-question they now have the tooling to answer. Billing to the org via `X-HF-Bill-To` is right there
-in the properties file — show it.
+question they now have the tooling to answer. Everything bills to each attendee's own credit
+balance, so there is nothing to configure and nothing shared to exhaust.
 
 **Useful anywhere** ✅ · **Better on HF** ✅✅ one token, one base URL, ~20 providers, no per-vendor
 signup — this comparison is a week of procurement anywhere else
@@ -593,8 +593,7 @@ hf jobs uv run ingest.py \
   --with duckdb --with huggingface_hub \
   -v hf://buckets/<you>/warehouse:/data \
   --flavor cpu-performance \
-  --timeout 1h \
-  --namespace <workshop-org>
+  --timeout 1h
 
 hf jobs logs <job-id> --follow
 ```
@@ -607,7 +606,7 @@ job* — a genuinely counterintuitive result people remember.
 
 ```bash
 # Monthly refresh — the Land Registry publishes new data every month
-hf jobs scheduled run '0 6 1 * *' python:3.12 python ingest.py --namespace <workshop-org>
+hf jobs scheduled run '0 6 1 * *' python:3.12 python ingest.py
 ```
 
 ```python
@@ -739,3 +738,34 @@ This set instead uses HF as **infrastructure for a data platform** — object st
 a model router, a publishing surface, an agent endpoint — which is both the less-told story and the
 one that actually maps onto the systems these attendees run at work. The Iceberg table on an HF
 bucket is the image they'll describe to a colleague on Monday.
+
+---
+
+## Appendix — what "Full Access" actually grants
+
+Every fine-grained permission Hugging Face offers, and whether this workshop touches it. Use
+**Full Access** on the day; this table is for anyone who asks what they just agreed to.
+
+| Group | Permission | Used here |
+|-------|------------|-----------|
+| Repositories | Read contents of your repos | ✅ clone, and Lab 3's S3 reads |
+| Repositories | Write contents/settings of your repos | ✅ create the Space and bucket, `git push`, publish the dataset, Lab 3's S3 writes |
+| Repositories | View access requests for your gated repos | — |
+| Repositories | Read contents of public gated repos you can access | — |
+| Inference | **Make calls to Inference Providers** | ✅ every AI lab |
+| Inference | Make calls to your Inference Endpoints | — |
+| Inference | Manage your Inference Endpoints | — |
+| Jobs | **Start and manage Jobs** | ✅ Lab 4, and publishing the dataset from a Job |
+| Collections | Write to your collections | ✅ the closing demo only |
+| Collections | Read your collections | — |
+| Webhooks | Create and manage webhooks | ✅ Lab 4 / PP-104 stretch only |
+| Webhooks | Access webhooks data | — |
+| Discussions & Posts | all three | — |
+| Notifications | both | — |
+| Billing | Read billing usage and payment method status | — |
+
+**Why Full Access rather than the six that are ticked above.** A token missing one box
+authenticates perfectly and then refuses the operation with `AccessDenied … Unknown`, naming no
+permission — verified the hard way on 2026-09-05, where read-without-write cost an hour of
+debugging with full context and a shell. In a room of twenty-five that is unrecoverable, and the
+token is a throwaway scoped to one day's work on one account.
