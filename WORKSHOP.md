@@ -95,7 +95,7 @@ Optional but useful: an SSH key added at hf.co/settings/keys (needed for the Dev
 | # | Task | Why it matters |
 |---|------|----------------|
 | 1 | **Create a workshop org** and invite attendees | Billing target for Jobs and inference. Free accounts have no credit balance, so `hf jobs run` fails for them unless it bills to an org: `--namespace workshop-org`. Same for the app's `X-HF-Bill-To` header. |
-| 2 | **Dry-run Lab 3 end to end** (Iceberg on an HF bucket) | It crosses the most third-party surfaces. Pin the exact working `storage-profile` JSON and paste it in the handout. Notes and fallback below. |
+| 2 | **Decide whether the Space runs on MinIO or on a bucket** | Both work. Bucket-backed means the data is real Parquet on the Hub from minute one, and Lab 3 becomes a demo rather than an exercise; MinIO-backed keeps Lab 3 as a hands-on lab. Either way, hand out the recipe — it is not discoverable. |
 | 3 | Pre-download `pp-2015.csv` into a **public** HF bucket or dataset repo | The Land Registry origin is one shared 170 MB download for the whole room. Serving it from HF is faster *and* demonstrates the point. |
 | 4 | Decide the **fallback venue** for the AI labs | If the venue's egress is bad, inference still works (it's a small API call) but Space builds may not. Have a pre-built Space per attendee as plan B. |
 | 5 | Confirm **PRO** on your own account | Dev Mode (the finale) is PRO/Team/Enterprise only. Attendees on free accounts watch that one rather than do it. |
@@ -528,71 +528,57 @@ signup — this comparison is a week of procurement anywhere else
 
 ## Lab 3 — Move the warehouse onto Hugging Face (35 min)
 
-**The conceptual payoff of the whole day.** An Iceberg catalog knows *where* your table is; it
-doesn't care *whose* object store that is. Prove it by cutting MinIO out and putting the data files
-in an HF bucket, without touching a line of query code.
+**Verified end to end on 2026-09-05.** An Iceberg catalog knows *where* your table is; it doesn't
+care whose object store that is. Cut MinIO out, put the data files in a Hugging Face bucket, and
+change no query code.
 
 ```bash
 hf buckets create <you>/warehouse --private
 ```
 
-Then: hf.co/settings/tokens → your token's ⋯ menu → **Generate S3 credentials** → an access key
-starting `HFAK…` and a secret shown exactly once.
+Then hf.co/settings/tokens → your token's ⋯ menu → **Generate S3 credentials** → an access key
+starting `HFAK…` and a secret shown once. Configure the app:
 
-Change the warehouse registration in `IcebergService.createWarehouse` to point at the gateway
-instead of MinIO:
-
-```json
-{
-  "warehouse-name": "lakehouse",
-  "project-id": "00000000-0000-0000-0000-000000000000",
-  "storage-profile": {
-    "type": "s3",
-    "bucket": "warehouse",
-    "endpoint": "https://s3.hf.co/<your-namespace>",
-    "region": "us-east-1",
-    "path-style-access": true,
-    "sts-enabled": false
-  },
-  "storage-credential": {
-    "type": "s3",
-    "credential-type": "access-key",
-    "aws-access-key-id": "HFAK...",
-    "aws-secret-access-key": "..."
-  }
-}
+```properties
+app.s3.endpoint=https://s3.hf.co
+app.s3.bucket=<your-namespace>       # the NAMESPACE, not the bucket - see below
+app.s3.key-prefix=warehouse          # the bucket name goes here
+app.s3.access-key=HFAK...
+app.s3.secret-key=...
+app.s3.sts-enabled=false
+app.s3.create-bucket=false
+app.s3.client-side-signing=true
+app.warehouse.explicit-location=false
 ```
 
-Reload a year, then open `https://huggingface.co/buckets/<you>/warehouse` in a browser and watch
-Iceberg's `metadata/` and `data/` directories appear, with the Parquet files listed and browsable.
-That moment — *my table's bytes are on the Hub* — is the one people photograph.
+Reload a year, then open `https://huggingface.co/buckets/<you>/warehouse` and watch Iceberg's
+`metadata/` and `data/` directories appear — as **real Parquet**, openable with
+`pd.read_parquet("hf://buckets/…")`. That moment is the one people photograph, and it is the
+difference between "the bytes are on the Hub" and "the data is on the Hub".
 
-**Four gateway differences to teach, because they will hit them:**
+### Four things that must all be right
 
-- **`sts-enabled: false`.** The gateway has no STS, so LakeKeeper can't vend temporary
-  credentials — it hands out the access key. Good hook for a two-minute aside on why credential
-  vending exists.
-- **`path-style-access: true`** is mandatory. Virtual-host style (`bucket.s3.hf.co`) doesn't
-  resolve, and the error message says "could not resolve hostname", which looks like DNS and isn't.
-- **Namespace in the endpoint.** HF buckets are `namespace/bucket`; S3 clients won't accept a `/`
-  in a bucket name, so the namespace goes in the endpoint URL.
-- **`ListObjectsV2` only**, no object versioning, no ACLs, no `UploadPartCopy`, no `x-amz-meta-*`.
-  "S3-compatible" is a spectrum, and reading the compatibility notes before adopting a store is the
-  actual professional lesson here.
+Each of the last three fails with an error pointing somewhere else entirely, which is why this lab
+needs the recipe above rather than discovery:
 
-> **Presenter: verify this before the workshop.** Newer AWS SDKs send trailing CRC32 checksums that
-> the gateway does not parse; this project pins AWS SDK v2 `2.25.58`, which predates that default,
-> so it should be fine — but confirm on your own account and pin the working JSON in the handout.
->
-> **Fallback if credential vending misbehaves:** leave Iceberg on MinIO and use the bucket for the
-> raw CSVs instead — mount it into the Space and have Spark read from the mount. Same "storage is
-> pluggable" lesson, none of the gateway's edges. Decide which version you're teaching *before* the
-> room is in it.
+| # | Requirement | What it looks like when wrong |
+|---|-------------|-------------------------------|
+| 1 | **AWS SDK ≥ 2.5x** with `apache-client` on the classpath | `403` with an empty body, or `ClassNotFoundException: ApacheHttpClient$Builder`. Iceberg 1.9.2 against a 2024-era SDK is the root cause; `S3FileIO` still builds an `ApacheHttpClient`, and that artifact stopped being transitive |
+| 2 | **Endpoint with no path** | `Storage Profile 'endpoint' must not have a path`. HF buckets are `namespace/bucket` and S3 clients won't take a `/` in a bucket name, so the namespace becomes the S3 bucket and the bucket name becomes `key-prefix` |
+| 3 | **No explicit `LOCATION`** | `Invalid location 's3://…'`. With a REST catalog the server places the table |
+| 4 | **Token with read *and* write** on repo contents | `AccessDenied … Unknown` on `PutObject`, after a perfectly successful authentication. Read alone is not enough, and the S3 error names no permission |
 
-**Useful anywhere** ✅ catalog/storage separation is the core Iceberg idea · **Better on HF** ✅✅
-their warehouse is now a browsable, shareable, permissioned Hub page
+> **Pre-flight, and make it a `PutObject`.** A `ListObjects` check passes with a read-only token and
+> tells you nothing. Have attendees run an actual write before the lab.
 
----
+### Why it is worth doing
+
+Without this, the Space's MinIO stores objects under `${DATA_ROOT}/minio`, and `DATA_ROOT` is
+already a Hugging Face bucket. So the data is on the Hub — as `…parquet/xl.meta` directories plus
+opaque `part.1` files that only MinIO can read. Nothing else can open them: not pandas, not DuckDB,
+not another Job, not the Hub's own file preview. Removing MinIO removes a translation layer that
+sits between object storage and object storage, and turns the same bytes into something every tool
+in the ecosystem understands.
 
 ## Lab 4 — Get the ingest off the Space (30 min)
 

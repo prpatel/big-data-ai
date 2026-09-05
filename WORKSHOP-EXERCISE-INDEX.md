@@ -34,7 +34,7 @@ Consolidated index of the 32 exercises across [`WORKSHOP.md`](WORKSHOP.md) (core
 | **B2** ⭐ | Write–audit–publish with branches | 50m | SQL + Java | 2–3 | — | Best "showstopper". Hardest of the four |
 | **B3** | Compaction, retention, partition evolution | 40m | SQL | 0 | — | Pairs with B5 (makes the mess) or Lab 4 (schedules the fix) |
 | **B4** | MERGE / CDC upserts, copy-on-write vs merge-on-read | 45m | SQL + Java | 1–2 | — | Fixes the real double-load defect |
-| **Lab 3** | Move the warehouse onto an HF bucket (S3 gateway) | 35m | Java (config) | 1–2 | **Buckets + S3 API** | **Highest risk.** Needs a presenter dry-run; fallback documented |
+| **Lab 3** ⭐ | Move the warehouse onto an HF bucket (S3 gateway) | 35m | Java (config) | 1–2 | **Buckets + S3 API** | **Verified working 2026-09-05.** Fiddly, not risky: four settings must be right and three fail with misleading errors, so hand out the recipe |
 | **Lab 5** | Publish as a dataset, then Spark vs DuckDB vs viewer | 25m | CLI | 0 | **Datasets, viewer, DuckDB console** | Ends on the honest "did you need Spark?" finding |
 
 ## C · Streaming & multi-engine — **needs local Docker**
