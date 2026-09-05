@@ -14,6 +14,14 @@ the Job reads the parquet the app wrote and uploads it to a dataset repo:
       -s HF_TOKEN \
       --flavor cpu-basic
 
+Where the export sits inside the bucket depends on how the app was running when it wrote it,
+which is not obvious and is easy to get wrong:
+
+    Spaces  -> app/export/<name>    (docker-entrypoint.sh symlinks /app/data to $DATA_ROOT/app)
+    compose -> export/<name>        (the app service mounts DATA_ROOT straight at /app/data)
+
+So this looks in both, and then falls back to searching the mount. Set EXPORT_DIR to skip that.
+
 Bucket -> repo server-side copy is not available yet, so this is a genuine upload. Doing it
 from a Job rather than a laptop means the bytes never cross the venue wifi.
 """
@@ -23,17 +31,37 @@ from pathlib import Path
 
 from huggingface_hub import HfApi
 
-EXPORT_DIR = Path(os.environ.get("EXPORT_DIR", "/data/export/uk-price-paid"))
+MOUNT = Path(os.environ.get("MOUNT", "/data"))
+NAME = os.environ.get("EXPORT_NAME", "uk-price-paid")
 REPO = os.environ.get("DATASET_REPO")
 PRIVATE = os.environ.get("PRIVATE", "1") not in ("0", "false", "False")
+
+
+def find_export():
+    """Locate the export directory: an explicit setting, then the two known layouts, then a search."""
+    explicit = os.environ.get("EXPORT_DIR")
+    if explicit:
+        return Path(explicit)
+    for candidate in (MOUNT / "app" / "export" / NAME,   # Spaces
+                      MOUNT / "export" / NAME):          # compose
+        if (candidate / "data").is_dir():
+            return candidate
+    # Last resort: the layout changed, or the app ran somewhere unusual.
+    for marker in MOUNT.glob(f"**/export/{NAME}/data"):
+        return marker.parent
+    return None
+
 
 if not REPO:
     sys.exit("Set DATASET_REPO, e.g. -e DATASET_REPO=your-name/uk-price-paid")
 
-if not EXPORT_DIR.is_dir():
+EXPORT_DIR = find_export()
+if EXPORT_DIR is None:
     sys.exit(
-        f"{EXPORT_DIR} does not exist. Run 'Export to Parquet' on the app's /admin page first, "
-        "and check the bucket is mounted at /data."
+        f"Could not find an export named '{NAME}' under {MOUNT}.\n"
+        f"Looked in {MOUNT}/app/export/{NAME} (Spaces) and {MOUNT}/export/{NAME} (compose).\n"
+        "Run 'Export to Parquet' on the app's /admin page first, check the bucket is mounted "
+        "at /data, or set EXPORT_DIR explicitly."
     )
 
 files = sorted((EXPORT_DIR / "data").glob("*.parquet"))
