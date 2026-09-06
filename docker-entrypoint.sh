@@ -17,6 +17,23 @@
 set -euo pipefail
 
 EMBEDDED_SERVICES="${EMBEDDED_SERVICES:-1}"
+
+# Whether to run MinIO inside this container.
+#
+# Default on, which is what the single-container image has always done. Turn it off when the
+# warehouse lives in object storage that already exists - a Hugging Face bucket reached through
+# s3.hf.co, say. There is no point proxying object storage in front of object storage: it costs
+# ~120 MB of RSS and, more to the point, MinIO stores its own on-disk format, so the parquet
+# ends up as `<name>.parquet/xl.meta` directories that nothing except MinIO can read.
+#
+# Inferred rather than declared: if APP_S3_ENDPOINT points anywhere other than this container,
+# MinIO is not the store, and starting it would be noise.
+if [[ -z "${EMBEDDED_MINIO:-}" ]]; then
+    case "${APP_S3_ENDPOINT:-}" in
+        ""|*127.0.0.1*|*localhost*) EMBEDDED_MINIO=1 ;;
+        *)                          EMBEDDED_MINIO=0 ;;
+    esac
+fi
 DATA_ROOT="${DATA_ROOT:-/data}"
 PG_DUMP_INTERVAL="${PG_DUMP_INTERVAL:-60}"
 
@@ -83,7 +100,8 @@ if ! mkdir -p "${DATA_ROOT}" 2>/dev/null || [[ ! -w "${DATA_ROOT}" ]]; then
 fi
 
 echo "[init] data root: ${DATA_ROOT}"
-mkdir -p "${MINIO_DATA}" "${APP_DATA}"
+mkdir -p "${APP_DATA}"
+[[ "${EMBEDDED_MINIO}" == "1" ]] && mkdir -p "${MINIO_DATA}"
 
 # IcebergService reads and writes ./data/house_prices relative to the working dir, so
 # point /app/data at the persistent volume rather than the container's ephemeral layer.
@@ -159,12 +177,16 @@ else
 fi
 
 # ---- MinIO (S3 storage backing the Iceberg warehouse) ---------------------------
-export MINIO_ROOT_USER="${MINIO_ROOT_USER:-minio}"
-export MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-minio1234}"
+if [[ "${EMBEDDED_MINIO}" == "1" ]]; then
+    export MINIO_ROOT_USER="${MINIO_ROOT_USER:-minio}"
+    export MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-minio1234}"
 
-run_tagged minio minio server "${MINIO_DATA}" --address :9000 --console-address :9001
+    run_tagged minio minio server "${MINIO_DATA}" --address :9000 --console-address :9001
 
-wait_for minio 60 curl -fsS http://127.0.0.1:9000/minio/health/live
+    wait_for minio 60 curl -fsS http://127.0.0.1:9000/minio/health/live
+else
+    echo "[init] EMBEDDED_MINIO=0; the warehouse lives in external storage (${APP_S3_ENDPOINT})"
+fi
 
 # ---- LakeKeeper (Iceberg REST catalog) ------------------------------------------
 LK_DB_URL="postgresql://postgres@${PGHOST}:${PGPORT}/postgres"
@@ -173,7 +195,8 @@ export LAKEKEEPER__PG_DATABASE_URL_WRITE="${LK_DB_URL}"
 # Must stay stable across restores: LakeKeeper encrypts stored credentials with it, and
 # a restored dump carries ciphertext written under whatever key was in force before.
 export LAKEKEEPER__PG_ENCRYPTION_KEY="${LAKEKEEPER__PG_ENCRYPTION_KEY:-P0d6Ye9v4rXDUpHUSj003yfF4E07SSBj}"
-# LakeKeeper's metrics exporter defaults to port 9000, which is MinIO's port. Under
+# LakeKeeper's metrics exporter defaults to port 9000, which is MinIO's port. Kept moved even
+# when MinIO is off, so the two topologies do not differ in ways nobody remembers. Under
 # compose they are separate containers and never collide; sharing one network namespace
 # they do, and LakeKeeper responds by tearing down its background services. Move it.
 export LAKEKEEPER__METRICS_PORT="${LAKEKEEPER__METRICS_PORT:-9191}"
