@@ -366,6 +366,64 @@ Two incidental findings worth knowing:
   validation today. If a lab adds `@Valid` on a request parameter it will silently do nothing until
   someone adds `spring-boot-starter-validation`; worth knowing before a table loses twenty minutes to it.
 
+## Deploying the Space bucket-backed
+
+The Space runs **without MinIO**: Iceberg writes straight to a Hugging Face bucket through the
+`s3.hf.co` gateway, so the warehouse is genuine Parquet on the Hub rather than MinIO's on-disk
+format. Verified end to end on 2026-09-06 — setup, a 5,000-row load, a query and a restart, with
+zero `xl.meta` entries in the bucket and pyarrow reading a data file directly.
+
+```bash
+hf buckets create <you>/warehouse --private
+```
+
+Then hf.co/settings/tokens → the token's ⋯ menu → **Generate S3 credentials** → an access key
+starting `HFAK…` and a secret, shown once. Set these on the Space:
+
+```bash
+# secrets - the two credential values
+hf spaces secrets add <you>/big-data-ai \
+  --secrets APP_S3_ACCESS_KEY=HFAK... \
+  --secrets APP_S3_SECRET_KEY=...
+
+# variables - everything else
+hf spaces variables add <you>/big-data-ai \
+  --env APP_S3_ENDPOINT=https://s3.hf.co \
+  --env APP_S3_BUCKET=<your-namespace> \
+  --env APP_S3_KEY_PREFIX=warehouse \
+  --env APP_S3_STS_ENABLED=false \
+  --env APP_S3_CREATE_BUCKET=false \
+  --env APP_S3_CLIENT_SIDE_SIGNING=true \
+  --env APP_WAREHOUSE_EXPLICIT_LOCATION=false \
+  --env AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+```
+
+Note `APP_S3_BUCKET` is your **namespace** and `APP_S3_KEY_PREFIX` is the bucket name — LakeKeeper
+refuses an endpoint carrying a path, so the namespace has to be the S3 "bucket". The entrypoint sees
+a non-local `APP_S3_ENDPOINT` and skips MinIO on its own; there is no separate switch to remember.
+
+The Space still needs its `/data` volume for the catalog dump and downloaded CSVs. That can be the
+same bucket — the volume writes under `app/`, the warehouse under `warehouse/` — or a second one.
+
+### What this costs, and what it buys
+
+**Buys:** the data is real Parquet on the Hub from minute one, openable with
+`pd.read_parquet("hf://buckets/…")`, by DuckDB, by a Job, or in the Hub's own file preview. One
+fewer process (~120 MB). And it retires a quiet risk: the entrypoint keeps Postgres off `DATA_ROOT`
+because object storage offers no atomic rename or durable `fsync`, and MinIO's `xl.meta` writes lean
+on the same guarantees, with no dump to restore from.
+
+**Costs:** generating S3 credentials is a **UI-only step, once per attendee** — there is no CLI or
+API for it. Budget five minutes in Lab 0 and expect a few people to paste the wrong half. And
+**Lab 3 stops being a lab**, because the thing it teaches is now the starting state; keep it as a
+five-minute explanation of why the bytes look different.
+
+> If you would rather keep Lab 3 hands-on, run the attendees' Spaces on MinIO and make **your own**
+> Space bucket-backed for the demo. Same story, told once from the front instead of twenty-five
+> times.
+
+---
+
 ## Lab 0 — Ship the thing (30 min)
 
 **Goal** Everyone has a URL that answers a question in English, backed by their own data.
@@ -526,7 +584,14 @@ signup — this comparison is a week of procurement anywhere else
 
 ---
 
-## Lab 3 — Move the warehouse onto Hugging Face (35 min)
+## Lab 3 — Move the warehouse onto Hugging Face (5 min explanation, not a lab)
+
+> **You chose bucket-backed Spaces, so this is already done** before anyone arrives — the warehouse
+> is on a Hugging Face bucket from the first load. Keep it as a short explanation at the top of an
+> hour: show the bucket page, open a Parquet file, and explain what would be there instead if MinIO
+> were in the path (`<name>.parquet/xl.meta` directories nothing else can read). The mechanics below
+> are what you would walk through, and what to fall back on if you switch attendees to MinIO and
+> want it hands-on again.
 
 **Verified end to end on 2026-09-05.** An Iceberg catalog knows *where* your table is; it doesn't
 care whose object store that is. Cut MinIO out, put the data files in a Hugging Face bucket, and
