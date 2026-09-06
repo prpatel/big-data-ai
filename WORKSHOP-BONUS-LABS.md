@@ -16,8 +16,8 @@ Two things already in this repo make several of these much cheaper than they loo
 
 | Lane | Needs | Labs |
 |------|-------|------|
-| **Space lane** — everything runs on Hugging Face, nothing local | an HF account | B1, B2, B3, B4, B7, B8, B9, B10, B11, B12 |
-| **Compose lane** — needs Docker on the laptop | Docker + ~8 GB RAM free | **B5** (Kafka), **B6** (Trino) — neither service is in the Space image |
+| **Space lane** — everything runs on Hugging Face, nothing local | an HF account | P1, P2, P3, P4, R2, R1, R3, R4, A11, P15 |
+| **Compose lane** — needs Docker on the laptop | Docker + ~8 GB RAM free | **P5** (Kafka), **P6** (Trino) — neither service is in the Space image |
 
 The core workshop is deliberately Space-only. If you want the streaming or multi-engine labs, say
 so in the prerequisites email — discovering it in the room costs you twenty minutes.
@@ -26,28 +26,159 @@ so in the prerequisites email — discovering it in the room costs you twenty mi
 
 | If the room is mostly… | Run these |
 |------------------------|-----------|
-| Data / platform engineers | **B2**, B4, B3, B1 |
-| Application & backend devs | **B7**, B11, B6, B1 |
-| ML / AI engineers | **B8**, B7, B9, B10 |
-| Streaming / Kafka people | **B5**, then B3 to clean up the mess it makes |
-| Mixed, and you want one showstopper | **B2** (write–audit–publish) or **B7** (agentic SQL) |
-| Team that lives in Cursor/Claude Code | **B12**, using any other lab as the spec |
+| Data / platform engineers | **P2**, P4, P3, P1 |
+| Application & backend devs | **R2**, A11, P6, P1 |
+| ML / AI engineers | **R1**, R2, R3, R4 |
+| Streaming / Kafka people | **P5**, then P3 to clean up the mess it makes |
+| Mixed, and you want one showstopper | **P2** (write–audit–publish) or **R2** (agentic SQL) |
+| Team that lives in Cursor/Claude Code | **P15**, using any other lab as the spec |
 
 ## Dependencies worth knowing
 
-- **B7, B8, B9, B10 all need Lab 1's eval harness.** Without it they're vibes. With it, each one
+- **R2, R1, R3, R4 all need F1's eval harness.** Without it they're vibes. With it, each one
   produces a number that moves — which is the entire pedagogical payload.
-- **B7 needs Lab 1's SQL guard**, and needs it more than the core workshop does: the model executes
+- **R2 needs F1's SQL guard**, and needs it more than the core workshop does: the model executes
   SQL autonomously in a loop.
-- **B5 creates the small-file problem that B3 solves.** Running them back to back is the best
+- **P5 creates the small-file problem that P3 solves.** Running them back to back is the best
   version of both.
-- **B10 closes a loop** — production traces become next month's eval set.
+- **R4 closes a loop** — production traces become next month's eval set.
 
 ---
 
 # Track A · Iceberg internals
 
-## B1 — Time travel and a snapshot diff view
+## A11 — Question → SQL → chart
+**30 min · easy-medium · Space lane** — *good closer when energy is low*
+
+**Build** A second structured-output call: given the result schema and a sample of rows, return a
+Vega-Lite spec; render it inline with htmx.
+
+The interesting constraint is that the model has to reason about **result shape** — one numeric
+column grouped by one categorical is a bar chart; a date series is a line; two numerics are a
+scatter; forty thousand rows are a table and nothing else. Getting it to refuse to chart is harder
+than getting it to chart.
+
+**Concepts** Structured output against a real JSON schema (Vega-Lite validates, so mistakes are
+visible immediately); separating "what does the data say" from "how should it be shown"; graceful
+degradation.
+
+**Why it's here** It's the most screenshot-able thing anyone will build all day, and short enough to
+finish. Sometimes that's the right lab.
+
+---
+
+# Track E · Working with an agent
+
+## R1 — The semantic layer, or: why text-to-SQL actually fails
+**45 min · medium · Space lane · needs F1**
+
+**Build** The layer that fixes the failures no model upgrade will.
+
+Ask the current app *"how many flats sold in London last year?"* and it fails twice, for reasons
+that have nothing to do with model quality:
+
+- `property_type` is `'F'`, not `'Flat'` — a coded column with no legend in the prompt
+- "London" is not a `town` in any useful sense — it's a `town` value *and* a dozen `district`
+  values, and the right answer depends on which the user meant
+- `town` vs `district` vs `county` is ambiguous even to a human reading the schema
+
+So build:
+
+1. **A data dictionary** — YAML mapping each coded column to its legend and synonyms
+   (`F → Flat, Flats, Maisonette, Apartment`), injected into the prompt.
+2. **A distinct-value index** for `town`, `district` and `county` — a few thousand strings,
+   embedded through HF Inference Providers (feature extraction is served by `hf-inference`,
+   Scaleway and Together).
+3. **Entity resolution at query time** — pull candidate place names out of the question, resolve
+   them against the index, and hand the model resolved literals plus a disambiguation note:
+   *"LONDON matches town='LONDON' (1.2M rows) and 33 districts — ask or pick."*
+
+**Then measure it with the F1 harness.** This routinely moves accuracy more than any model
+upgrade in F2's bake-off, which is a genuinely useful and slightly deflating finding to land on a
+room that just spent thirty minutes shopping for models.
+
+**Concepts** Grounding by values and not just schema; entity resolution; the fact that most
+text-to-SQL failure is a data-modeling problem wearing an AI costume.
+
+---
+
+## R2 — From one-shot generation to an agentic loop ⭐
+**50 min · medium-hard · Space lane · needs F1**
+
+**Build** Replace `AiService.generateQuery()`'s single call with a tool-calling agent that explores
+the schema before it writes anything.
+
+Spring AI 2.0 is already on the classpath and does this declaratively: `@Tool`-annotated methods
+registered via `.defaultTools(...)`, with local tools and remote MCP tools sharing the same
+`ToolCallback` interface — so anything built here also works through the MCP endpoint from R5.
+
+Give it four or five tools:
+
+| Tool | Why the model needs it |
+|------|------------------------|
+| `listTables()` | stop hardcoding the table name |
+| `describeTable(name)` | the live schema, not a string constant that rots |
+| `sampleValues(column, n)` | discovers that `property_type` is `D/S/T/F/O`, not `"Flat"` |
+| `runSql(sql)` | **the guarded, LIMIT-capped executor from F1** |
+| `explain(sql)` | check the plan before running something expensive |
+
+The loop: explore → write → execute → **read the error** → fix → answer. The retry-on-error path is
+the whole point; make them deliberately break a query and watch the model recover.
+
+**Then measure it.** Run the same ten-question eval from F1 against one-shot and agentic:
+
+| | accuracy | p50 latency | tokens/question |
+|---|---|---|---|
+| one-shot | | | |
+| agentic | | | |
+
+Accuracy usually jumps; latency and cost usually go up three to five times. **That table is the
+lab.** "Should this be an agent?" becomes a question with an answer instead of a preference.
+
+**Concepts** Tool calling; letting a model read its own errors; why autonomous execution makes the
+F1 guardrail load-bearing rather than decorative; measuring an architecture change instead of
+asserting it.
+
+---
+
+## R3 — Semantic query cache
+**35 min · medium · Space lane · pairs with R1**
+
+**Build** Embed each incoming question, compare against previously answered ones, and on a close
+enough match reuse the **SQL** — never the results, because the data moves — skipping the LLM
+entirely. Surface hit rate, latency saved and cost saved on a small dashboard.
+
+**The lab is the failure mode.** *"Average price in Camden in 2015"* and *"…in 2016"* embed almost
+identically and the naive cache returns confidently wrong SQL. The fix is to normalize entities and
+literals out of the question before embedding — which is exactly the machinery R1 built. Have them
+ship the naive version first, watch it break, then fix it. Nobody forgets a cache that lied to them.
+
+**Concepts** Embeddings for retrieval rather than generation; similarity thresholds as a tunable
+risk; caching a *plan* rather than a *result*; and the general rule that a cache key must contain
+everything that changes the answer.
+
+---
+
+## R4 — Query observability, published as a dataset
+**40 min · medium · Space lane · needs F1**
+
+**Build** Instrument every question end to end: model id, provider, prompt and completion tokens,
+latency, the generated SQL, whether it parsed, whether it executed, rows returned, and Iceberg's own
+scan metrics (files scanned, bytes read).
+
+Write those traces **to an Iceberg table** — the app dogfooding its own warehouse — then publish the
+table as an HF dataset repo so the Dataset Viewer and DuckDB console work over it for free.
+
+**The loop that closes:** production traces become next month's eval set. Questions that failed
+become test cases. That flywheel is the thing senior engineers in the room will recognize
+immediately and want to copy.
+
+**Concepts** Observability as a product surface, not a log file; scan metrics as the bridge between
+"the query was slow" and "the table needs P3"; treating your own telemetry as data worth modeling.
+
+---
+
+## P1 — Time travel and a snapshot diff view
 **45 min · medium · Space lane**
 
 **Build** A `/history` page listing every snapshot of the table, and a query page that can run
@@ -86,7 +217,7 @@ snapshots.
 
 ---
 
-## B2 — Write–audit–publish with branches ⭐
+## P2 — Write–audit–publish with branches ⭐
 **50 min · hard · Space lane** — *the showstopper*
 
 **Build** Ingestion that cannot publish bad data, using Iceberg branches as a staging area that
@@ -120,8 +251,8 @@ auditor can query exactly what shipped.
 
 ---
 
-## B3 — Compaction, and the economics of file size
-**40 min · medium · Space lane** — *best paired with B5 or Core Lab 4*
+## P3 — Compaction, and the economics of file size
+**40 min · medium · Space lane** — *best paired with P5 or Core H4*
 
 **Build** A Maintenance panel on `/admin`, plus the measurements that justify it.
 
@@ -156,14 +287,14 @@ Have them prove it by comparing the `files` count scanned before and after on a 
 
 **Concepts** The small-file problem; sort orders and Z-ordering as a pruning strategy; hidden
 partitioning; and the real tension worth arguing about — **`expire_snapshots` destroys the time
-travel from B1.** Retention is a policy decision, not a default.
+travel from P1.** Retention is a policy decision, not a default.
 
 **Stretch** Schedule the whole thing as a Hugging Face Job on a cron, which is exactly how you'd run
 it in production.
 
 ---
 
-## B4 — MERGE, and making `record_status` mean something
+## P4 — MERGE, and making `record_status` mean something
 **45 min · medium-hard · Space lane**
 
 **Build** Idempotent ingestion. This lab fixes a real defect: loading the same year twice doubles
@@ -203,7 +334,7 @@ have existed from the start.
 
 # Track B · Streaming
 
-## B5 — Kafka → Iceberg, live
+## P5 — Kafka → Iceberg, live
 **60 min · hard · compose lane**
 
 **Build** A streaming ingest path into the same table people have been querying all day.
@@ -224,9 +355,9 @@ The work:
    LakeKeeper REST catalog, `iceberg.tables=housing.staging_prices`, and a
    `iceberg.control.commit.interval-ms` they get to tune.
 3. Keep the query page open and **watch row counts climb while queries keep returning**. Then watch
-   the snapshot list from B1 grow one entry per commit interval.
+   the snapshot list from P1 grow one entry per commit interval.
 
-**Concepts** The commit interval as the latency/file-size dial (drop it to 1s and watch B3's
+**Concepts** The commit interval as the latency/file-size dial (drop it to 1s and watch P3's
 small-file problem appear in real time — that's the lab's best moment); exactly-once via the
 connector's control topic; readers never blocked by writers, which is the property that makes a
 table format viable for streaming at all.
@@ -238,7 +369,7 @@ handles it — have them find the retry in the logs.
 
 # Track C · Open format, many engines
 
-## B6 — One table, three engines
+## P6 — One table, three engines
 **35 min · easy-medium · compose lane**
 
 **Build** A `/compare` page that runs the same SQL through Spark and Trino and shows both result
@@ -262,150 +393,19 @@ ask which one you'd actually keep.
 
 # Track D · AI engineering
 
-## B7 — From one-shot generation to an agentic loop ⭐
-**50 min · medium-hard · Space lane · needs Lab 1**
-
-**Build** Replace `AiService.generateQuery()`'s single call with a tool-calling agent that explores
-the schema before it writes anything.
-
-Spring AI 2.0 is already on the classpath and does this declaratively: `@Tool`-annotated methods
-registered via `.defaultTools(...)`, with local tools and remote MCP tools sharing the same
-`ToolCallback` interface — so anything built here also works through the MCP endpoint from Lab 6.
-
-Give it four or five tools:
-
-| Tool | Why the model needs it |
-|------|------------------------|
-| `listTables()` | stop hardcoding the table name |
-| `describeTable(name)` | the live schema, not a string constant that rots |
-| `sampleValues(column, n)` | discovers that `property_type` is `D/S/T/F/O`, not `"Flat"` |
-| `runSql(sql)` | **the guarded, LIMIT-capped executor from Lab 1** |
-| `explain(sql)` | check the plan before running something expensive |
-
-The loop: explore → write → execute → **read the error** → fix → answer. The retry-on-error path is
-the whole point; make them deliberately break a query and watch the model recover.
-
-**Then measure it.** Run the same ten-question eval from Lab 1 against one-shot and agentic:
-
-| | accuracy | p50 latency | tokens/question |
-|---|---|---|---|
-| one-shot | | | |
-| agentic | | | |
-
-Accuracy usually jumps; latency and cost usually go up three to five times. **That table is the
-lab.** "Should this be an agent?" becomes a question with an answer instead of a preference.
-
-**Concepts** Tool calling; letting a model read its own errors; why autonomous execution makes the
-Lab 1 guardrail load-bearing rather than decorative; measuring an architecture change instead of
-asserting it.
-
----
-
-## B8 — The semantic layer, or: why text-to-SQL actually fails
-**45 min · medium · Space lane · needs Lab 1**
-
-**Build** The layer that fixes the failures no model upgrade will.
-
-Ask the current app *"how many flats sold in London last year?"* and it fails twice, for reasons
-that have nothing to do with model quality:
-
-- `property_type` is `'F'`, not `'Flat'` — a coded column with no legend in the prompt
-- "London" is not a `town` in any useful sense — it's a `town` value *and* a dozen `district`
-  values, and the right answer depends on which the user meant
-- `town` vs `district` vs `county` is ambiguous even to a human reading the schema
-
-So build:
-
-1. **A data dictionary** — YAML mapping each coded column to its legend and synonyms
-   (`F → Flat, Flats, Maisonette, Apartment`), injected into the prompt.
-2. **A distinct-value index** for `town`, `district` and `county` — a few thousand strings,
-   embedded through HF Inference Providers (feature extraction is served by `hf-inference`,
-   Scaleway and Together).
-3. **Entity resolution at query time** — pull candidate place names out of the question, resolve
-   them against the index, and hand the model resolved literals plus a disambiguation note:
-   *"LONDON matches town='LONDON' (1.2M rows) and 33 districts — ask or pick."*
-
-**Then measure it with the Lab 1 harness.** This routinely moves accuracy more than any model
-upgrade in Lab 2's bake-off, which is a genuinely useful and slightly deflating finding to land on a
-room that just spent thirty minutes shopping for models.
-
-**Concepts** Grounding by values and not just schema; entity resolution; the fact that most
-text-to-SQL failure is a data-modeling problem wearing an AI costume.
-
----
-
-## B9 — Semantic query cache
-**35 min · medium · Space lane · pairs with B8**
-
-**Build** Embed each incoming question, compare against previously answered ones, and on a close
-enough match reuse the **SQL** — never the results, because the data moves — skipping the LLM
-entirely. Surface hit rate, latency saved and cost saved on a small dashboard.
-
-**The lab is the failure mode.** *"Average price in Camden in 2015"* and *"…in 2016"* embed almost
-identically and the naive cache returns confidently wrong SQL. The fix is to normalize entities and
-literals out of the question before embedding — which is exactly the machinery B8 built. Have them
-ship the naive version first, watch it break, then fix it. Nobody forgets a cache that lied to them.
-
-**Concepts** Embeddings for retrieval rather than generation; similarity thresholds as a tunable
-risk; caching a *plan* rather than a *result*; and the general rule that a cache key must contain
-everything that changes the answer.
-
----
-
-## B10 — Query observability, published as a dataset
-**40 min · medium · Space lane · needs Lab 1**
-
-**Build** Instrument every question end to end: model id, provider, prompt and completion tokens,
-latency, the generated SQL, whether it parsed, whether it executed, rows returned, and Iceberg's own
-scan metrics (files scanned, bytes read).
-
-Write those traces **to an Iceberg table** — the app dogfooding its own warehouse — then publish the
-table as an HF dataset repo so the Dataset Viewer and DuckDB console work over it for free.
-
-**The loop that closes:** production traces become next month's eval set. Questions that failed
-become test cases. That flywheel is the thing senior engineers in the room will recognize
-immediately and want to copy.
-
-**Concepts** Observability as a product surface, not a log file; scan metrics as the bridge between
-"the query was slow" and "the table needs B3"; treating your own telemetry as data worth modeling.
-
----
-
-## B11 — Question → SQL → chart
-**30 min · easy-medium · Space lane** — *good closer when energy is low*
-
-**Build** A second structured-output call: given the result schema and a sample of rows, return a
-Vega-Lite spec; render it inline with htmx.
-
-The interesting constraint is that the model has to reason about **result shape** — one numeric
-column grouped by one categorical is a bar chart; a date series is a line; two numerics are a
-scatter; forty thousand rows are a table and nothing else. Getting it to refuse to chart is harder
-than getting it to chart.
-
-**Concepts** Structured output against a real JSON schema (Vega-Lite validates, so mistakes are
-visible immediately); separating "what does the data say" from "how should it be shown"; graceful
-degradation.
-
-**Why it's here** It's the most screenshot-able thing anyone will build all day, and short enough to
-finish. Sometimes that's the right lab.
-
----
-
-# Track E · Working with an agent
-
-## B12 — Drive a coding agent through an unfamiliar Java codebase
+## P15 — Drive a coding agent through an unfamiliar Java codebase
 **40 min · any level · Space lane**
 
 **Build** Any other lab in this document — but with an agentic coding tool, and with the lab's real
 subject being *how you drive it*.
 
-Hand them a spec (B1 and B11 work best; both are self-contained and visually verifiable) and have
+Hand them a spec (P1 and A11 work best; both are self-contained and visually verifiable) and have
 them:
 
 1. Write an `AGENTS.md` / `CLAUDE.md` for this repo first — where the Spark session is configured,
    that Thymeleaf fragments return `template :: fragment`, that admin endpoints are htmx `POST`s,
    that Iceberg procedures live under `<catalog>.system.*`. Fifteen minutes here saves an hour.
-2. **Give the agent the Lab 1 eval harness as its feedback loop**, so it can check its own work
+2. **Give the agent the F1 eval harness as its feedback loop**, so it can check its own work
    instead of asking. This is the single biggest difference between agent runs that converge and
    agent runs that wander.
 3. Constrain the diff — one endpoint, one template, no refactors — and review it properly.

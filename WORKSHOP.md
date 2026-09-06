@@ -39,7 +39,7 @@ disappears if people arrive cold.
 shown once.
 
 Everything the day needs is covered: creating a Space and a bucket, pushing over git, calling
-Inference Providers, starting Jobs, publishing a dataset, and the S3 credentials Lab 3 derives from
+Inference Providers, starting Jobs, publishing a dataset, and the S3 credentials H2 derives from
 it. There is a minimum set (see the appendix at the end of this file) but do not use it in a
 workshop — a token missing one box authenticates perfectly and then fails with
 `AccessDenied … Unknown`, naming no permission. That is unrecoverable in a room.
@@ -95,7 +95,7 @@ Optional but useful: an SSH key added at hf.co/settings/keys (needed for the Dev
 | # | Task | Why it matters |
 |---|------|----------------|
 | 1 | **Get credits onto each attendee's account**, and confirm at least one has landed before the day | Jobs need a positive credit balance, and so does inference past the free tier. Credits on their own account mean no org, no `--namespace`, and no `X-HF-Bill-To` — it all bills to them. Budget ~$2 each; $5 is generous. |
-| 2 | **Decide whether the Space runs on MinIO or on a bucket** | Both work. Bucket-backed means the data is real Parquet on the Hub from minute one, and Lab 3 becomes a demo rather than an exercise; MinIO-backed keeps Lab 3 as a hands-on lab. Either way, hand out the recipe — it is not discoverable. |
+| 2 | **Decide whether the Space runs on MinIO or on a bucket** | Both work. Bucket-backed means the data is real Parquet on the Hub from minute one, and H2 becomes a demo rather than an exercise; MinIO-backed keeps H2 as a hands-on lab. Either way, hand out the recipe — it is not discoverable. |
 | 3 | Pre-download `pp-2015.csv` into a **public** HF bucket or dataset repo | The Land Registry origin is one shared 170 MB download for the whole room. Serving it from HF is faster *and* demonstrates the point. |
 | 4 | Decide the **fallback venue** for the AI labs | If the venue's egress is bad, inference still works (it's a small API call) but Space builds may not. Have a pre-built Space per attendee as plan B. |
 | 5 | Confirm **PRO** on your own account | Dev Mode (the finale) is PRO/Team/Enterprise only. Attendees on free accounts watch that one rather than do it. |
@@ -132,7 +132,7 @@ Rough, for 25 attendees over 4 hours:
 | Item | Basis | Estimate |
 |------|-------|----------|
 | Spaces (cpu-upgrade, if you upgrade at all) | 25 × 4 h × ~$0.03/h | ~$3 |
-| Jobs — Lab 4 | 25 × 15 min × $1.90/h (`cpu-performance`) | ~$12 |
+| Jobs — H4 | 25 × 15 min × $1.90/h (`cpu-performance`) | ~$12 |
 | Jobs — if you use `cpu-upgrade` instead | 25 × 15 min × $0.03/h | ~$0.20 |
 | Inference — Labs 1, 2 | 25 × ~150 calls, small open models | ~$5–15 |
 | Buckets | free allowance | $0 |
@@ -149,17 +149,17 @@ The spine is Labs 0–3. Everything after is chosen live based on how the room i
 | Time | Block |
 |------|-------|
 | 0:00 – 0:15 | Intro: what a lakehouse is, what the app does, **start your Space build now** (it builds while you talk) |
-| 0:15 – 0:45 | **Lab 0** — Ship the thing |
-| 0:45 – 1:25 | **Lab 1** — Make the analyst trustworthy |
+| 0:15 – 0:45 | **H1** — Ship the thing |
+| 0:45 – 1:25 | **F1** — Make the analyst trustworthy |
 | 1:25 – 1:35 | Break |
-| 1:35 – 2:05 | **Lab 2** — Model bake-off |
-| 2:05 – 2:40 | **Lab 3** — Move the warehouse onto Hugging Face |
+| 1:35 – 2:05 | **F2** — Model bake-off |
+| 2:05 – 2:40 | **H2** — Move the warehouse onto Hugging Face |
 | 2:40 – 2:50 | Break |
-| 2:50 – 3:30 | **Pick one:** Lab 4 (Jobs) · Lab 5 (Publish + engine shootout) · Lab 6 (MCP) |
+| 2:50 – 3:30 | **Pick one:** H4 (Jobs) · H3 (Publish + engine shootout) · R5 (MCP) |
 | 3:30 – 3:50 | Demos: everyone's Space added to a shared Collection |
 | 3:50 – 4:00 | Wrap, where to go next |
 
-**Running only 3 hours?** Do 0, 1, 2 and demo Lab 3 from the stage. Lab 1 is the one that must
+**Running only 3 hours?** Do 0, 1, 2 and demo H2 from the stage. F1 is the one that must
 not be cut — it's the reason technical people came.
 
 ---
@@ -183,7 +183,7 @@ around it:
 - **Batch the edit, then push.** Write the whole change and push once. Read the build log while it
   runs — `hf spaces logs --build --follow` — rather than sitting on the Space page.
 - **Make the thing you're iterating on a runtime parameter.** This is worth more than any deploy
-  trick. Lab 2 is the example: rather than four deploys to try four models, spend the first push
+  trick. F2 is the example: rather than four deploys to try four models, spend the first push
   making the model a per-request option, then run the whole bake-off with no further deploys at all.
 - **Space variables do not avoid a build.** Measured on 2026-09-02:
   `hf spaces variables add` puts the Space through `RUNNING → RUNNING_BUILDING →
@@ -325,7 +325,7 @@ published port) *and* for LakeKeeper (via compose DNS), so one string is correct
 **The proper fix, if you want a lab out of it:** split the property in two —
 `app.s3.endpoint` for the app's own client and something like `app.s3.catalog-endpoint` for the
 value handed to LakeKeeper. Twenty minutes of work, and it makes the deployment topologies
-independent. It would also be an honest addition to Lab 1's list of defects, since the root problem
+independent. It would also be an honest addition to F1's list of defects, since the root problem
 is the same one: a 400 swallowed into a success message.
 
 ### The full rebuild — when you change the Dockerfile or the entrypoint
@@ -352,7 +352,7 @@ docker run -d --name big-data-ai \
 | Setup Environment | ✅ bucket · ✅ bootstrap · ✅ warehouse |
 | Load → query | 500-row synthetic year loaded, `GROUP BY town` returned correct counts |
 | Iceberg write path | Parquet under `warehouse/housing/staging/data/`, metadata JSON + Avro manifest alongside |
-| `.snapshots` metadata table | readable — so bonus lab B1 works as written |
+| `.snapshots` metadata table | readable — so bonus lab P1 works as written |
 | Compose services-only | `docker compose up -d lakekeeper` starts db + migrate + minio + lakekeeper, and nothing else |
 | App from source against those services | starts in ~20 s; bucket ✅ and bootstrap ✅, but **warehouse creation fails** — see the bug above |
 
@@ -360,7 +360,7 @@ Two incidental findings worth knowing:
 
 - **The MCP server is already auto-configuring.** Startup logs show
   `McpServerAutoConfiguration` enabling resource, prompt and completion capabilities — the starter is
-  live with zero tools registered. Lab 6 / B6 is adding tools to a running server, not standing one up.
+  live with zero tools registered. R5 / P6 is adding tools to a running server, not standing one up.
 - **A harmless startup warning**: `NoProviderFoundException` from
   `OptionalValidatorFactoryBean` — no Jakarta Validation provider on the classpath. Nothing uses bean
   validation today. If a lab adds `@Valid` on a request parameter it will silently do nothing until
@@ -484,16 +484,16 @@ because object storage offers no atomic rename or durable `fsync`, and MinIO's `
 on the same guarantees with no dump to fall back on.
 
 **Costs:** step 5 is **UI-only, once per attendee** — no CLI, no API. Budget five minutes and expect
-a few people to swap the access key and the secret. And **Lab 3 stops being a lab**, because what it
+a few people to swap the access key and the secret. And **H2 stops being a lab**, because what it
 teaches is now the starting state.
 
-> If you would rather keep Lab 3 hands-on, run the attendees' Spaces on MinIO — drop steps 3 (second
+> If you would rather keep H2 hands-on, run the attendees' Spaces on MinIO — drop steps 3 (second
 > bucket), 5's two `APP_S3_*` secrets and all of step 6 — and make only **your own** Space
 > bucket-backed for the demo.
 
 ---
 
-## Lab 0 — Ship the thing (30 min)
+## H1 — Ship the thing (30 min)
 
 **Goal** Everyone has a URL that answers a question in English, backed by their own data.
 
@@ -555,7 +555,7 @@ work succeeded. Teach `hf spaces logs --follow` in the first ten minutes; they'l
 
 ---
 
-## Lab 1 — Make the analyst trustworthy (40 min)
+## F1 — Make the analyst trustworthy (40 min)
 
 The highest-value lab. `AiService.generateQuery()` as written is a realistic first draft with
 realistic problems, and the attendees get to find them.
@@ -587,13 +587,13 @@ point is that it exists.
 
 **Why this is the best lab in the workshop** Everyone in the room has shipped an LLM feature with
 no way to tell whether a prompt change helped. They leave with the smallest thing that fixes that,
-and Lab 2 immediately pays them back for building it.
+and F2 immediately pays them back for building it.
 
-**Useful anywhere** ✅ entirely portable · **Better on HF** ✅ the model swap in Lab 2 is one string
+**Useful anywhere** ✅ entirely portable · **Better on HF** ✅ the model swap in F2 is one string
 
 ---
 
-## Lab 2 — Model bake-off on Inference Providers (30 min)
+## F2 — Model bake-off on Inference Providers (30 min)
 
 Now the eval harness earns its keep. **Start by making the model a runtime parameter — this is the first half of the lab.** The model
 is currently pinned in `application.properties` and baked into the `ChatClient` at construction, so
@@ -608,7 +608,7 @@ chatClient.prompt()
 ```
 
 After that push, **the entire bake-off runs with no further deploys** — and the eval harness from
-Lab 1 can loop over all four models in a single run instead of being run four times.
+F1 can loop over all four models in a single run instead of being run four times.
 
 > Don't reach for Space variables here. `SPRING_AI_OPENAI_CHAT_MODEL` does bind onto
 > `spring.ai.openai.chat.model` via relaxed binding, but changing a variable puts the Space through
@@ -653,7 +653,7 @@ signup — this comparison is a week of procurement anywhere else
 
 ---
 
-## Lab 3 — Move the warehouse onto Hugging Face (5 min explanation, not a lab)
+## H2 — Move the warehouse onto Hugging Face (5 min explanation, not a lab)
 
 > **You chose bucket-backed Spaces, so this is already done** before anyone arrives — the warehouse
 > is on a Hugging Face bucket from the first load. Keep it as a short explanation at the top of an
@@ -714,7 +714,7 @@ not another Job, not the Hub's own file preview. Removing MinIO removes a transl
 sits between object storage and object storage, and turns the same bytes into something every tool
 in the ecosystem understands.
 
-## Lab 4 — Get the ingest off the Space (30 min)
+## H4 — Get the ingest off the Space (30 min)
 
 **The problem, stated honestly:** `Download` and `Load` run *inside an HTTP request*, on the Space's
 2 vCPU, with no progress and no retry. One year is tolerable. Eleven years is not. This is the
@@ -758,7 +758,7 @@ the volume mount means the Job and the Space share storage with zero glue
 
 ---
 
-## Lab 5 — Publish it, then check whether you needed Spark (25 min)
+## H3 — Publish it, then check whether you needed Spark (25 min)
 
 Export the Iceberg table to Parquet and publish it as a dataset repo:
 
@@ -788,7 +788,7 @@ attendees generated themselves rather than asserting it from a slide.
 
 ---
 
-## Lab 6 — Turn the lakehouse into a tool an agent can call (20 min, finale)
+## R5 — Turn the lakehouse into a tool an agent can call (20 min, finale)
 
 `spring-ai-starter-mcp-server-webmvc` is already in `pom.xml` and **completely unused** — nothing
 in `src/` mentions MCP. So there's a real, small, satisfying build here.
@@ -796,14 +796,14 @@ in `src/` mentions MCP. So there's a real, small, satisfying build here.
 Expose two MCP tools over the Space's existing HTTP port:
 
 - `describe_table()` → the live Iceberg schema
-- `run_query(sql)` → the guarded executor from Lab 1
+- `run_query(sql)` → the guarded executor from F1
 
 Then point a coding agent at `https://<you>-big-data-ai.hf.space/mcp` and ask it a question in
 English. It writes SQL, runs it against their warehouse, and reasons about the answer — with the
-Lab 1 guardrail refusing anything that isn't a `SELECT`.
+F1 guardrail refusing anything that isn't a `SELECT`.
 
 The framing: a Space isn't just a demo page, it's a publicly addressable, permissioned tool
-endpoint that any agent can use. And the guardrail from Lab 1 is now load-bearing, because the
+endpoint that any agent can use. And the guardrail from F1 is now load-bearing, because the
 thing writing the SQL is fully autonomous.
 
 **Useful anywhere** ✅✅ MCP is the integration surface everyone is being asked about ·
@@ -811,7 +811,7 @@ thing writing the SQL is fully autonomous.
 
 ---
 
-## Alternative finale — Dev Mode (PRO only)
+## H5 — Dev Mode (PRO only)
 
 If most of the room is on PRO, this lands better as a live fix-a-bug exercise, because a Docker
 Space rebuild is 8–15 minutes and Dev Mode skips it entirely.
@@ -840,7 +840,7 @@ a foot-gun worth demonstrating deliberately rather than discovering.
 
 - Everyone makes their Space public and adds it to a shared **Collection** — instant gallery of 25
   working lakehouses, and a permanent artifact of the day.
-- Pool the Lab 2 bake-off numbers on the board. The winner is rarely the biggest model, and that
+- Pool the F2 bake-off numbers on the board. The winner is rarely the biggest model, and that
   slide writes itself from the room's own data.
 - Show the org billing page. Four hours, 25 people, real infrastructure, ~$30.
 
@@ -856,8 +856,8 @@ and the one-line pitch for each service they touched.
 | 25 simultaneous cold Space builds at 0:15 | Not a real risk: the cold build is 70 s and it runs on HF's builders, not the venue's wifi. Everyone pushes during the intro and it is done before you finish talking. |
 | Land Registry origin slow or down | Serve `pp-2015.csv` from your own public bucket (prep #3) |
 | Attendees can't run Jobs — no credit balance | Everything bills to the workshop org: `--namespace`. Test with a free-tier account beforehand, not with the room. |
-| Lab 3 gateway incompatibility | Dry run + pinned JSON + the MinIO fallback, decided in advance |
-| Spark OOM on a Space's 2 vCPU / 16 GB | One year only in the core path. Eleven years belongs in Lab 4, where a Job has the RAM. |
+| H2 gateway incompatibility | Dry run + pinned JSON + the MinIO fallback, decided in advance |
+| Spark OOM on a Space's 2 vCPU / 16 GB | One year only in the core path. Eleven years belongs in H4, where a Job has the RAM. |
 | Room finishes early / late | Labs 4, 5 and 6 are independent — take one, two, or none |
 | Dev Mode not available | It's PRO-gated; make it the alternative finale, not the main one |
 
@@ -882,17 +882,17 @@ Every fine-grained permission Hugging Face offers, and whether this workshop tou
 
 | Group | Permission | Used here |
 |-------|------------|-----------|
-| Repositories | Read contents of your repos | ✅ clone, and Lab 3's S3 reads |
-| Repositories | Write contents/settings of your repos | ✅ create the Space and bucket, `git push`, publish the dataset, Lab 3's S3 writes |
+| Repositories | Read contents of your repos | ✅ clone, and H2's S3 reads |
+| Repositories | Write contents/settings of your repos | ✅ create the Space and bucket, `git push`, publish the dataset, H2's S3 writes |
 | Repositories | View access requests for your gated repos | — |
 | Repositories | Read contents of public gated repos you can access | — |
 | Inference | **Make calls to Inference Providers** | ✅ every AI lab |
 | Inference | Make calls to your Inference Endpoints | — |
 | Inference | Manage your Inference Endpoints | — |
-| Jobs | **Start and manage Jobs** | ✅ Lab 4, and publishing the dataset from a Job |
+| Jobs | **Start and manage Jobs** | ✅ H4, and publishing the dataset from a Job |
 | Collections | Write to your collections | ✅ the closing demo only |
 | Collections | Read your collections | — |
-| Webhooks | Create and manage webhooks | ✅ Lab 4 / PP-104 stretch only |
+| Webhooks | Create and manage webhooks | ✅ H4 / P8 stretch only |
 | Webhooks | Access webhooks data | — |
 | Discussions & Posts | all three | — |
 | Notifications | both | — |

@@ -38,53 +38,22 @@ that one, and when to refuse to chart at all — which is the part worth learnin
 
 | Ticket | Feature | Time | Standout |
 |--------|---------|------|----------|
-| PP-101 | Chart the answer | 40 min | |
-| PP-102 | Comparable sales &amp; a valuation range | 60 min | ⭐ |
-| PP-103 | Watchlists and alerts | 50 min | |
-| PP-104 | New data lands → the business acts | 55 min | ⭐ |
-| PP-105 | Upload a portfolio, get it valued | 55 min | |
-| PP-106 | Price per square metre (new dataset) | 60 min | ⭐ |
-| PP-107 | The monthly market commentary | 45 min | |
-| PP-108 | Which of these sales are wrong? | 40 min | |
-| PP-109 | Who's likely to sell? | 45 min | |
-| PP-110 | Ask it from Slack | 40 min | |
-| PP-111 | Can I trust this number? | 30 min | |
-| PP-112 | The mix problem, and a real index | 60 min | |
+| A11 | Chart the answer | 40 min | |
+| A10 | Comparable sales &amp; a valuation range | 60 min | ⭐ |
+| P7 | Watchlists and alerts | 50 min | |
+| P8 | New data lands → the business acts | 55 min | ⭐ |
+| P9 | Upload a portfolio, get it valued | 55 min | |
+| P10 | Price per square metre (new dataset) | 60 min | ⭐ |
+| A12 | The monthly market commentary | 45 min | |
+| P11 | Which of these sales are wrong? | 40 min | |
+| P12 | Who's likely to sell? | 45 min | |
+| A13 | Ask it from Slack | 40 min | |
+| P13 | Can I trust this number? | 30 min | |
+| P14 | The mix problem, and a real index | 60 min | |
 
 ---
 
-## PP-101 — "Don't make me read a table"
-**Priya · 40 min**
-
-> "When I ask how prices have moved in Camden I get two hundred rows of numbers. I need the picture.
-> I'm pasting these into client decks and I'm currently rebuilding every one of them in Excel."
-
-**What you ship** Results render as the right chart automatically, with a download, and an override
-when the automatic choice is wrong.
-
-**Acceptance criteria**
-- A time series renders as a line; one category plus one measure renders as bars; two measures
-  render as a scatter
-- Money is formatted as £ with sensible axis steps; dates are readable
-- Results the tool shouldn't chart — more than two dimensions, tens of thousands of rows, a single
-  scalar — render as a table **with a one-line reason**, not a broken chart
-- Priya can override the chart type, and her override sticks for that question
-
-**The interesting problem** Choosing the chart is easy; *refusing* is hard, and it's where every
-naive version of this feature falls over. The decision is a function of result shape — cardinality,
-column types, row count — not of the question. Push them to compute the shape first and let the
-model choose within what's legal, rather than asking the model to decide freely and hoping. That
-ordering (constrain, then ask) is the transferable lesson.
-
-**Debrief question** "What happens when the query returns one number?" Most teams won't have
-handled it, and a giant single-bar chart in a client deck is worse than a table.
-
-<sub>Under the hood: a second structured-output call returning a Vega-Lite spec, validated against
-the computed result shape before it renders.</sub>
-
----
-
-## PP-102 — "Give me comps I can defend" ⭐
+## A10 — "Give me comps I can defend" ⭐
 **Marcus · 60 min**
 
 > "I'm valuing 14 Acacia Road, SW11. I need the comparable sales and a range I'd be willing to put
@@ -115,7 +84,85 @@ generation, graceful degradation, and the difference between an answer and a def
 
 ---
 
-## PP-103 — "Tell me when something changes"
+## A11 — "Don't make me read a table"
+**Priya · 40 min**
+
+> "When I ask how prices have moved in Camden I get two hundred rows of numbers. I need the picture.
+> I'm pasting these into client decks and I'm currently rebuilding every one of them in Excel."
+
+**What you ship** Results render as the right chart automatically, with a download, and an override
+when the automatic choice is wrong.
+
+**Acceptance criteria**
+- A time series renders as a line; one category plus one measure renders as bars; two measures
+  render as a scatter
+- Money is formatted as £ with sensible axis steps; dates are readable
+- Results the tool shouldn't chart — more than two dimensions, tens of thousands of rows, a single
+  scalar — render as a table **with a one-line reason**, not a broken chart
+- Priya can override the chart type, and her override sticks for that question
+
+**The interesting problem** Choosing the chart is easy; *refusing* is hard, and it's where every
+naive version of this feature falls over. The decision is a function of result shape — cardinality,
+column types, row count — not of the question. Push them to compute the shape first and let the
+model choose within what's legal, rather than asking the model to decide freely and hoping. That
+ordering (constrain, then ask) is the transferable lesson.
+
+**Debrief question** "What happens when the query returns one number?" Most teams won't have
+handled it, and a giant single-bar chart in a client deck is worse than a table.
+
+<sub>Under the hood: a second structured-output call returning a Vega-Lite spec, validated against
+the computed result shape before it renders.</sub>
+
+---
+
+## A12 — "Write the commentary. Every month. In our voice."
+**Sam · 45 min**
+
+> "Four paragraphs on the market, out on the third working day, in the house style. I currently
+> write it from a spreadsheet Priya sends me and it takes half a day."
+
+**What you ship** A generated draft with real figures, editable before it goes out.
+
+**Acceptance criteria**
+- **Every numeral in the output is machine-verified against the computed metrics** — a figure that
+  isn't in the bundle fails the draft
+- A failed verification regenerates, and after N attempts falls back to a template, rather than
+  publishing something unverified
+- House voice comes from examples of previous commentary, not from an adjective in a prompt
+- Sam can edit, and the edit is what ships
+
+**The interesting problem** The reliable pattern is **compute → narrate → verify**, and the verify
+step is the build: extract every number from the generated prose and assert it appears in the
+metrics bundle. It's about thirty lines of code, it's the difference between a feature Sam trusts
+and one she checks by hand every month, and almost nobody writes it.
+
+Second-order problem worth surfacing: the model will happily write *"prices rose sharply"* off a
+0.4% move. Verified numbers, unverified adjectives. What do you do about that?
+
+---
+
+## A13 — "I'm not opening another dashboard"
+**Everyone · 40 min**
+
+> "Put it in Slack. If I have to open a tab, I won't use it."
+
+**What you ship** A bot that answers in-channel, with the chart, and the SQL behind a fold.
+
+**Acceptance criteria**
+- Answer plus chart posted in the thread where it was asked
+- The SQL is one click away and always available — never hidden
+- Channel context is used where it's unambiguous and asked about where it isn't
+- Cost and rate are bounded; a runaway thread can't run up a bill
+
+**The interesting problem** A wrong answer in a public channel is much worse than a wrong answer in
+an app, because it gets screenshotted, forwarded and quoted in a meeting three weeks later with no
+provenance. So the surface needs to carry its own caveats: what it assumed, what it filtered, how
+fresh the data is. Distribution changes the design requirements — that's the point of the ticket,
+and it's why "just wrap it in a bot" is usually wrong.
+
+---
+
+## P7 — "Tell me when something changes"
 **Ash · 50 min**
 
 > "I watch six districts. I'm not going to log into your app every month. Tell me when my areas
@@ -146,7 +193,7 @@ client?"
 
 ---
 
-## PP-104 — "New data landed. Do the thing." ⭐
+## P8 — "New data landed. Do the thing." ⭐
 **The business · 55 min**
 
 > "Land Registry publishes monthly. Right now somebody has to remember to press Load, and then
@@ -181,7 +228,7 @@ quarantine → downstream fan-out.</sub>
 
 ---
 
-## PP-105 — "Here's our portfolio. Value the book."
+## P9 — "Here's our portfolio. Value the book."
 **Dani · 55 min**
 
 > "Forty addresses in a spreadsheet. I need last sale, current estimate and which ones have moved,
@@ -207,7 +254,7 @@ every data product anyone in the room will build.
 
 ---
 
-## PP-106 — "Everyone else shows price per square metre" ⭐
+## P10 — "Everyone else shows price per square metre" ⭐
 **Priya · 60 min · brings in a second dataset**
 
 > "£450,000 tells a client nothing. £6,200 per square metre tells them everything. Every portal
@@ -238,7 +285,7 @@ which offers bulk CSV per local authority and an API.
 - Below a coverage floor, the number is not shown at all
 
 **The interesting problem** The join is imperfect and always will be — the same address matching as
-PP-105, plus multiple certificates per property, plus self-reported areas with real outliers (a
+P9, plus multiple certificates per property, plus self-reported areas with real outliers (a
 twelve square metre house, a four thousand square metre flat). Coverage will land somewhere around
 sixty to eighty percent and it will be **biased**: newer and rented properties are far likelier to
 have a certificate.
@@ -252,33 +299,7 @@ down?" Most teams won't have asked. That's the lesson.
 
 ---
 
-## PP-107 — "Write the commentary. Every month. In our voice."
-**Sam · 45 min**
-
-> "Four paragraphs on the market, out on the third working day, in the house style. I currently
-> write it from a spreadsheet Priya sends me and it takes half a day."
-
-**What you ship** A generated draft with real figures, editable before it goes out.
-
-**Acceptance criteria**
-- **Every numeral in the output is machine-verified against the computed metrics** — a figure that
-  isn't in the bundle fails the draft
-- A failed verification regenerates, and after N attempts falls back to a template, rather than
-  publishing something unverified
-- House voice comes from examples of previous commentary, not from an adjective in a prompt
-- Sam can edit, and the edit is what ships
-
-**The interesting problem** The reliable pattern is **compute → narrate → verify**, and the verify
-step is the build: extract every number from the generated prose and assert it appears in the
-metrics bundle. It's about thirty lines of code, it's the difference between a feature Sam trusts
-and one she checks by hand every month, and almost nobody writes it.
-
-Second-order problem worth surfacing: the model will happily write *"prices rose sharply"* off a
-0.4% move. Verified numbers, unverified adjectives. What do you do about that?
-
----
-
-## PP-108 — "Some of these sales are obviously wrong"
+## P11 — "Some of these sales are obviously wrong"
 **Marcus · 40 min**
 
 > "There's a £100 terrace in my comps and a £4 million semi in Burnley. They're wrecking my ranges."
@@ -290,7 +311,7 @@ Second-order problem worth surfacing: the model will happily write *"prices rose
   duplicates, and impossible dates
 - Each flag has a stated rule and a reason string a human can read
 - **Nothing is deleted.** Flagged rows stay queryable
-- PP-102's comps exclude flagged rows by default; a market-share report includes them
+- A10's comps exclude flagged rows by default; a market-share report includes them
 
 **The interesting problem** These aren't errors. A £100 sale is a real transfer between related
 parties. A £4m Burnley semi is probably a portfolio sale of thirty houses recorded against one
@@ -304,7 +325,7 @@ destructive cleaning pipelines for the rest of their careers.
 
 ---
 
-## PP-109 — "Who's likely to sell this year?"
+## P12 — "Who's likely to sell this year?"
 **Prospecting team · 45 min**
 
 > "Two hundred addresses in my patch, ranked, so I know where to post letters."
@@ -333,28 +354,7 @@ has a compliance surface, and noticing that unprompted is a mark of seniority.
 
 ---
 
-## PP-110 — "I'm not opening another dashboard"
-**Everyone · 40 min**
-
-> "Put it in Slack. If I have to open a tab, I won't use it."
-
-**What you ship** A bot that answers in-channel, with the chart, and the SQL behind a fold.
-
-**Acceptance criteria**
-- Answer plus chart posted in the thread where it was asked
-- The SQL is one click away and always available — never hidden
-- Channel context is used where it's unambiguous and asked about where it isn't
-- Cost and rate are bounded; a runaway thread can't run up a bill
-
-**The interesting problem** A wrong answer in a public channel is much worse than a wrong answer in
-an app, because it gets screenshotted, forwarded and quoted in a meeting three weeks later with no
-provenance. So the surface needs to carry its own caveats: what it assumed, what it filtered, how
-fresh the data is. Distribution changes the design requirements — that's the point of the ticket,
-and it's why "just wrap it in a bot" is usually wrong.
-
----
-
-## PP-111 — "Can I trust this number?"
+## P13 — "Can I trust this number?"
 **The CFO, once, at the worst possible moment · 30 min**
 
 > "You've told the board the average price rose 4%. Is that right? How would I know?"
@@ -376,7 +376,7 @@ everything built that day as a product someone has to trust rather than a demo s
 
 ---
 
-## PP-112 — "Our chart says prices fell. Everyone knows they rose."
+## P14 — "Our chart says prices fell. Everyone knows they rose."
 **Priya · 60 min · the hardest one here**
 
 > "Average price is down 3% this month. But we sold a lot more flats this month. The chart is
@@ -393,9 +393,9 @@ everything built that day as a product someone has to trust rather than a demo s
 
 **The interesting problem** Mix effect is the most common way property statistics lie, and it's the
 same failure as Simpson's paradox in a suit. Repeat-sales pairing needs the address matching from
-PP-105 — the same property, two dates — and then real decisions: what about properties extended
+P9 — the same property, two dates — and then real decisions: what about properties extended
 between sales, or sold twice in three months, or where one of the two sales was a flagged transfer
-from PP-108?
+from P11?
 
 This is where the day's earlier tickets compound, and where a room of developers discovers that the
 hard part of analytics was never the SQL.
@@ -406,13 +406,13 @@ hard part of analytics was never the SQL.
 
 | Session shape | Tickets |
 |---|---|
-| One afternoon, mixed room | **PP-101** then **PP-102** — visible payoff, then depth |
-| Data-platform heavy room | **PP-104** then **PP-108** |
-| "Show me an AI feature that isn't a chatbot" | **PP-102** and **PP-107** — both are compute-then-narrate |
-| Bring-your-own-data theme | **PP-106**, with **PP-105**'s matching as the prerequisite |
-| Analytics / stats-minded room | **PP-112**, with **PP-103** as the warm-up |
+| One afternoon, mixed room | **A11** then **A10** — visible payoff, then depth |
+| Data-platform heavy room | **P8** then **P11** |
+| "Show me an AI feature that isn't a chatbot" | **A10** and **A12** — both are compute-then-narrate |
+| Bring-your-own-data theme | **P10**, with **P9**'s matching as the prerequisite |
+| Analytics / stats-minded room | **P14**, with **P7** as the warm-up |
 | Two full days | 101 → 108 → 102 → 106 → 104 → 112, in that order |
 
-Every ticket except PP-101 and PP-111 is easier if the eval harness from the core workshop's Lab 1
+Every ticket except A11 and P13 is easier if the eval harness from the core workshop's F1
 already exists — not because the tickets are about AI, but because "did that change make it better?"
 is a question they will all raise, and answering it by opinion wastes the afternoon.
