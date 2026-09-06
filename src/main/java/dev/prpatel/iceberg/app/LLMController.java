@@ -45,6 +45,6 @@ class LLMController {
     @GetMapping("/ai/generateQuery")
     public String generateQuery(
             @RequestParam(value = "query", defaultValue = "show me all the properties sold in Clapham") String query) {
-        return aiService.generateQuery(query);
+        return aiService.generateAnswer(query).sql();
     }
 }

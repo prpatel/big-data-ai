@@ -35,10 +35,15 @@
     <section>
         <div id="generatedsql" name="generatedsql" value="placeholder"></div>
 
+        <label for="maxrows">
+            Rows to return
+            <input type="number" id="maxrows" name="maxrows" value="50" min="1" max="200">
+        </label>
+
         <button hx-post="/runquery"
                 hx-trigger="click"
                 hx-target="#queryresult"
-                hx-include="#generatedsql">
+                hx-include="#generatedsql, #maxrows">
             Run Query
         </button>
     </section>

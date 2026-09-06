@@ -19,14 +19,17 @@ class AdminController {
     private final PromptStore promptStore;
     private final ModelStore modelStore;
     private final ParquetExporter exporter;
+    private final SchemaStore schemaStore;
 
     @Autowired
     public AdminController(IcebergService icebergService, PromptStore promptStore,
-                           ModelStore modelStore, ParquetExporter exporter) {
+                           ModelStore modelStore, ParquetExporter exporter,
+                           SchemaStore schemaStore) {
         this.icebergService = icebergService;
         this.promptStore = promptStore;
         this.modelStore = modelStore;
         this.exporter = exporter;
+        this.schemaStore = schemaStore;
     }
 
     @GetMapping
@@ -46,6 +49,7 @@ class AdminController {
     @PostMapping("/setup")
     public String setup(Model model) {
         icebergService.setup();
+        schemaStore.refresh();
         model.addAttribute("message", "Setup operation initiated.");
         return "admin_result :: result";
     }
@@ -53,6 +57,7 @@ class AdminController {
     @PostMapping("/clear")
     public String clear(Model model) {
         icebergService.clear();
+        schemaStore.refresh();
         model.addAttribute("message", "Clear operation initiated.");
         return "admin_result :: result";
     }
@@ -121,6 +126,7 @@ class AdminController {
     @PostMapping("/load")
     public String load(@RequestParam(name = "year", required = false) String year, Model model) {
         icebergService.load(year);
+        schemaStore.refresh();
         String message = (year != null && !year.isEmpty()) 
             ? "Load operation initiated for year: " + year 
             : "Load operation initiated for all files.";

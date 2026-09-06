@@ -7,7 +7,12 @@
 <body>
 <div th:fragment="result" id="parent-div">
 
-<!--    <input id="generatedsql" name="generatedsql" type="textarea" rows="3" wrap="soft" th:value="${result}">-->
+    <!-- The model was asked for JSON. When it answers with something else the raw reply is shown
+         here instead of being quietly repaired, because the fix belongs in the system prompt. -->
+    <article th:if="${error}" style="border-left:3px solid var(--pico-del-color);padding-left:1rem">
+        <strong th:text="${error}"></strong>
+        <pre style="white-space:pre-wrap"><code th:text="${raw}"></code></pre>
+    </article>
 
     <textarea
             id="generatedsql"
@@ -15,6 +20,13 @@
             rows="4"
             th:text="${result}"
     ></textarea>
+
+    <small th:if="${assumptions != null and !assumptions.isEmpty()}">
+        <strong>Assumptions:</strong> <span th:text="${assumptions}"></span>
+    </small>
+    <small th:if="${columnsUsed != null and !columnsUsed.isEmpty()}">
+        <br><strong>Columns used:</strong> <span th:text="${columnsUsed}"></span>
+    </small>
 </div>
 </body>
 </html>
