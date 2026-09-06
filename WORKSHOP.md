@@ -366,61 +366,130 @@ Two incidental findings worth knowing:
   validation today. If a lab adds `@Valid` on a request parameter it will silently do nothing until
   someone adds `spring-boot-starter-validation`; worth knowing before a table loses twenty minutes to it.
 
-## Deploying the Space bucket-backed
+## Two storage paths, and how each one is configured
 
-The Space runs **without MinIO**: Iceberg writes straight to a Hugging Face bucket through the
-`s3.hf.co` gateway, so the warehouse is genuine Parquet on the Hub rather than MinIO's on-disk
-format. Verified end to end on 2026-09-06 — setup, a 5,000-row load, a query and a restart, with
-zero `xl.meta` entries in the bucket and pyarrow reading a data file directly.
+This is the part that is genuinely confusing, so it is worth being explicit: a bucket-backed Space
+writes to Hugging Face storage **two different ways**, and only one of them is a volume.
 
-```bash
-hf buckets create <you>/warehouse --private
+```mermaid
+flowchart LR
+    laptop["Your laptop<br/><code>git push hf main</code>"]
+
+    subgraph space["Your Space — one container"]
+        app["The app<br/>Spring Boot + Spark local[*]"]
+        lk["LakeKeeper<br/>Iceberg REST catalog"]
+        pg["Postgres<br/>holds the storage profile"]
+    end
+
+    bkt2["<b>Warehouse</b><br/>Iceberg parquet + metadata"]
+    bkt1["<b>/data volume</b><br/>CSVs · exports · catalog dump"]
+
+    laptop -->|builds and deploys| space
+    app -->|"① Setup: POST the storage profile"| lk
+    lk -->|"② persisted against warehouse 'lakehouse'"| pg
+    pg -->|"③ pg_dump every 60s"| bkt1
+    app -->|"④ parquet, via s3.hf.co"| bkt2
+    app -->|"⑤ ordinary file writes"| bkt1
 ```
 
-Then hf.co/settings/tokens → the token's ⋯ menu → **Generate S3 credentials** → an access key
-starting `HFAK…` and a secret, shown once. Set these on the Space:
+**① Setup Environment is where the location is stated — once.** The app takes the `APP_S3_*`
+settings and POSTs them to LakeKeeper as a *storage profile*: endpoint, bucket, key-prefix, region,
+STS flag, and the access key. Nothing else in the system hardcodes where data lives.
+
+**② LakeKeeper remembers it**, stored in Postgres against the warehouse named `lakehouse`. That is
+the answer to *"how does LakeKeeper know where to look?"* — you told it at Setup, and it kept it.
+
+**③ Postgres is dumped to the volume** every 60 seconds and on shutdown, which is how the catalog
+survives a restart. The cluster itself is rebuilt from that dump on every boot.
+
+**④ Spark never reads `APP_S3_*` to find the data.** It asks the catalog. `SparkConfig` only knows
+the LakeKeeper URL and the warehouse name `lakehouse`; when a table is created or loaded, LakeKeeper
+replies with an `s3://…` location, and Spark writes Parquet straight to `s3.hf.co`. That is the
+answer to *"how does the app know?"* — the catalog is the middleman, which is exactly what an
+Iceberg REST catalog is for.
+
+> The one exception is credentials. Normally LakeKeeper vends those too, but the HF gateway has no
+> STS, so `APP_S3_CLIENT_SIDE_SIGNING=true` hands Spark the same access key to sign its own
+> requests. That is why the key appears in two places: LakeKeeper needs it to validate and write
+> metadata, Spark needs it to write data files.
+
+**⑤ CSVs and exports are plain file writes** to the mounted volume. No S3, no catalog — just
+`data/house_prices/…` relative to the working directory.
+
+### Why two buckets
+
+The volume and the warehouse are different mechanisms — a managed filesystem mount versus an S3
+endpoint — so give them separate buckets. One bucket can serve both if the warehouse sits under its
+own prefix, but that is untested here, and mixing Iceberg's UUID directories with `app/` and
+`lakekeeper-catalog.sql` at the same root is harder to read when something goes wrong.
+
+---
+
+## Attendee setup, in full
 
 ```bash
-# secrets - the two credential values
+# 1. the code
+git clone <workshop-repo> big-data-ai && cd big-data-ai
+
+# 2. the Space
+hf repos create <you>/big-data-ai --type space --sdk docker --private
+
+# 3. two buckets: one for the volume, one for the warehouse
+hf buckets create <you>/lakehouse --private
+hf buckets create <you>/warehouse --private
+
+# 4. mount the first one as /data
+hf spaces volumes set <you>/big-data-ai --volume hf://buckets/<you>/lakehouse:/data
+
+# 5. S3 credentials for the second one
+#    hf.co/settings/tokens -> your token's ... menu -> Generate S3 credentials
+#    (UI only - there is no CLI or API for this)
 hf spaces secrets add <you>/big-data-ai \
+  --secrets HF_TOKEN=hf_xxx \
   --secrets APP_S3_ACCESS_KEY=HFAK... \
   --secrets APP_S3_SECRET_KEY=...
 
-# variables - everything else
+# 6. tell the app about the warehouse
 hf spaces variables add <you>/big-data-ai \
   --env APP_S3_ENDPOINT=https://s3.hf.co \
-  --env APP_S3_BUCKET=<your-namespace> \
+  --env APP_S3_BUCKET=<you> \
   --env APP_S3_KEY_PREFIX=warehouse \
   --env APP_S3_STS_ENABLED=false \
   --env APP_S3_CREATE_BUCKET=false \
   --env APP_S3_CLIENT_SIDE_SIGNING=true \
   --env APP_WAREHOUSE_EXPLICIT_LOCATION=false \
   --env AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+
+# 7. deploy
+hf auth login --add-to-git-credential
+git remote add hf https://huggingface.co/spaces/<you>/big-data-ai
+git push --force hf main
+hf spaces logs <you>/big-data-ai --build --follow
 ```
 
-Note `APP_S3_BUCKET` is your **namespace** and `APP_S3_KEY_PREFIX` is the bucket name — LakeKeeper
-refuses an endpoint carrying a path, so the namespace has to be the S3 "bucket". The entrypoint sees
-a non-local `APP_S3_ENDPOINT` and skips MinIO on its own; there is no separate switch to remember.
+**`APP_S3_BUCKET` is your username, not the bucket name.** LakeKeeper refuses a storage endpoint
+that carries a path, and HF buckets are addressed as `namespace/bucket` — so the namespace has to
+play the part of the S3 bucket, and the real bucket name becomes `APP_S3_KEY_PREFIX`. It reads
+wrongly and is correct.
 
-The Space still needs its `/data` volume for the catalog dump and downloaded CSVs. That can be the
-same bucket — the volume writes under `app/`, the warehouse under `warehouse/` — or a second one.
+The entrypoint sees a non-local `APP_S3_ENDPOINT` and skips MinIO by itself; there is no switch to
+set.
 
 ### What this costs, and what it buys
 
-**Buys:** the data is real Parquet on the Hub from minute one, openable with
-`pd.read_parquet("hf://buckets/…")`, by DuckDB, by a Job, or in the Hub's own file preview. One
-fewer process (~120 MB). And it retires a quiet risk: the entrypoint keeps Postgres off `DATA_ROOT`
+**Buys:** the warehouse is genuine Parquet on the Hub from the first load — openable with
+`pd.read_parquet("hf://buckets/…")`, by DuckDB, by a Job, or in the Hub's file preview. One fewer
+process (~120 MB). And it retires a quiet risk: the entrypoint keeps Postgres off `DATA_ROOT`
 because object storage offers no atomic rename or durable `fsync`, and MinIO's `xl.meta` writes lean
-on the same guarantees, with no dump to restore from.
+on the same guarantees with no dump to fall back on.
 
-**Costs:** generating S3 credentials is a **UI-only step, once per attendee** — there is no CLI or
-API for it. Budget five minutes in Lab 0 and expect a few people to paste the wrong half. And
-**Lab 3 stops being a lab**, because the thing it teaches is now the starting state; keep it as a
-five-minute explanation of why the bytes look different.
+**Costs:** step 5 is **UI-only, once per attendee** — no CLI, no API. Budget five minutes and expect
+a few people to swap the access key and the secret. And **Lab 3 stops being a lab**, because what it
+teaches is now the starting state.
 
-> If you would rather keep Lab 3 hands-on, run the attendees' Spaces on MinIO and make **your own**
-> Space bucket-backed for the demo. Same story, told once from the front instead of twenty-five
-> times.
+> If you would rather keep Lab 3 hands-on, run the attendees' Spaces on MinIO — drop steps 3 (second
+> bucket), 5's two `APP_S3_*` secrets and all of step 6 — and make only **your own** Space
+> bucket-backed for the demo.
 
 ---
 
