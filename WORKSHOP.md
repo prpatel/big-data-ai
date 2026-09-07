@@ -425,52 +425,10 @@ own prefix, but that is untested here, and mixing Iceberg's UUID directories wit
 
 ---
 
-## Attendee setup, in full
+## Attendee setup — what it costs and buys
 
-```bash
-# 1. the code
-git clone <workshop-repo> big-data-ai && cd big-data-ai
-
-# 2. the Space
-hf repos create <you>/big-data-ai --type space --sdk docker --private
-
-# 3. two buckets: one for the volume, one for the warehouse
-hf buckets create <you>/lakehouse --private
-hf buckets create <you>/warehouse --private
-
-# 4. mount the first one as /data
-hf spaces volumes set <you>/big-data-ai --volume hf://buckets/<you>/lakehouse:/data
-
-# 5. S3 credentials for the second one
-#    hf.co/settings/tokens -> your token's ... menu -> Generate S3 credentials
-#    (UI only - there is no CLI or API for this)
-hf spaces secrets add <you>/big-data-ai \
-  --secrets HF_TOKEN=hf_xxx \
-  --secrets APP_S3_ACCESS_KEY=HFAK... \
-  --secrets APP_S3_SECRET_KEY=...
-
-# 6. tell the app about the warehouse
-hf spaces variables add <you>/big-data-ai \
-  --env APP_S3_ENDPOINT=https://s3.hf.co \
-  --env APP_S3_BUCKET=<you> \
-  --env APP_S3_KEY_PREFIX=warehouse \
-  --env APP_S3_STS_ENABLED=false \
-  --env APP_S3_CREATE_BUCKET=false \
-  --env APP_S3_CLIENT_SIDE_SIGNING=true \
-  --env APP_WAREHOUSE_EXPLICIT_LOCATION=false \
-  --env AWS_REQUEST_CHECKSUM_CALCULATION=when_required
-
-# 7. deploy
-hf auth login --token hf_xxx --add-to-git-credential
-git remote add hf https://huggingface.co/spaces/<you>/big-data-ai
-git push --force hf main
-hf spaces logs <you>/big-data-ai --build --follow
-```
-
-**`APP_S3_BUCKET` is your username, not the bucket name.** LakeKeeper refuses a storage endpoint
-that carries a path, and HF buckets are addressed as `namespace/bucket` — so the namespace has to
-play the part of the S3 bucket, and the real bucket name becomes `APP_S3_KEY_PREFIX`. It reads
-wrongly and is correct.
+The commands live in **H1** below; this is the decision behind them, kept separate so the two do not
+drift apart.
 
 The entrypoint sees a non-local `APP_S3_ENDPOINT` and skips MinIO by itself; there is no switch to
 set.
@@ -521,7 +479,7 @@ name the cause:
 ```bash
 # 1. Get the code
 git clone <workshop-repo-url> big-data-ai && cd big-data-ai
-hf auth login --token hf_xxx --add-to-git-credential   # --token is required, see below
+hf auth login --token hf_xxx --add-to-git-credential   # a no-op if they did the pre-work
 
 # 2. Your own Space — Docker SDK, private
 hf repos create <you>/big-data-ai --type space --sdk docker --private
