@@ -114,8 +114,9 @@ handled it, and a giant single-bar chart in a client deck is worse than a table.
 
 **Step-by-step build guide:** [https://claude.ai/code/artifact/5d0a622c-5893-44db-8b9b-8552c7e16b11](https://claude.ai/code/artifact/5d0a622c-5893-44db-8b9b-8552c7e16b11)
 
-<sub>Under the hood: a second structured-output call returning a Vega-Lite spec, validated against
-the computed result shape before it renders.</sub>
+<sub>Under the hood: code computes the result shape and decides which chart types are legal; a
+structured-output call picks one of those and names the axes; code builds the Vega-Lite spec. The
+model never returns a spec, so a bad reply can produce no chart but never a broken one.</sub>
 
 ---
 

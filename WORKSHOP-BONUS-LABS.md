@@ -50,17 +50,20 @@ so in the prerequisites email — discovering it in the room costs you twenty mi
 ## A11 — Question → SQL → chart
 **30 min · easy-medium · Space lane** — *good closer when energy is low*
 
-**Build** A second structured-output call: given the result schema and a sample of rows, return a
-Vega-Lite spec; render it inline with htmx.
+**Build** Code computes the result shape and decides which chart types are legal; a second
+structured-output call picks one of those and names the axes; code builds the Vega-Lite spec and
+renders it inline with htmx.
 
 The interesting constraint is that the model has to reason about **result shape** — one numeric
 column grouped by one categorical is a bar chart; a date series is a line; two numerics are a
 scatter; forty thousand rows are a table and nothing else. Getting it to refuse to chart is harder
 than getting it to chart.
 
-**Concepts** Structured output against a real JSON schema (Vega-Lite validates, so mistakes are
-visible immediately); separating "what does the data say" from "how should it be shown"; graceful
-degradation.
+**Concepts** Constrain-then-ask: the set of legal answers is computed in code the team can test,
+and the model chooses inside it. Separating "what does the data say" from "how should it be shown";
+graceful degradation. Expect to spend time on the rendering itself &mdash; Vega fails *silently*,
+laying out zero-sized marks with no exception and nothing in the console, so "the call succeeded" is
+a long way from "there is a chart on the screen".
 
 **Why it's here** It's the most screenshot-able thing anyone will build all day, and short enough to
 finish. Sometimes that's the right lab.
