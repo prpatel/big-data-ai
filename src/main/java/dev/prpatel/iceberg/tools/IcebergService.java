@@ -87,6 +87,12 @@ public class IcebergService {
 
     // The HF gateway has no STS, so it cannot vend temporary credentials - LakeKeeper has to hand
     // out the access key itself. MinIO does support STS, which is why this defaults to true.
+    // When the client signs its own S3 requests, LakeKeeper must be told to stop signing them,
+    // or it advertises a signer endpoint in the table config and the client uses it regardless of
+    // anything set on the Spark side. See createWarehouse.
+    @Value("${app.s3.client-side-signing:false}")
+    private boolean clientSideSigning;
+
     @Value("${app.s3.sts-enabled:true}")
     private boolean s3StsEnabled;
 
@@ -315,7 +321,7 @@ public class IcebergService {
 
         System.out.println("Creating warehouse...");
         try {
-            createWarehouse(client, baseUrl, s3Bucket, s3Endpoint,
+            createWarehouse(client, baseUrl, s3Bucket, s3Endpoint, clientSideSigning,
                     s3AccessKey, s3SecretKey, s3Region, s3StsEnabled, s3KeyPrefix);
             System.out.println("✅ Warehouse created successfully");
         } catch (Exception e) {
@@ -441,7 +447,8 @@ public class IcebergService {
     // Note: This interacts with the LakeKeeper Management API, not the Iceberg REST Catalog Protocol.
     // Therefore, we use HttpClient instead of RESTCatalog.
     public static void createWarehouse(HttpClient client, String baseUrl, String storageBucket,
-                                       String s3Endpoint, String accessKey, String secretKey,
+                                       String s3Endpoint, boolean clientSideSigning,
+                                       String accessKey, String secretKey,
                                        String region, boolean stsEnabled, String keyPrefix) throws Exception {
         String payload = """
             {
@@ -456,6 +463,7 @@ public class IcebergService {
                     "region": "%s",
                     "path-style-access": true,
                     "flavor": "s3-compat",
+                    "remote-signing-enabled": %s,
                     "sts-enabled": %s
                 },
                 "storage-credential": {
@@ -466,7 +474,7 @@ public class IcebergService {
                 }
             }
             """.formatted(storageBucket, keyPrefix == null ? "" : keyPrefix,
-                            s3Endpoint, region, stsEnabled, accessKey, secretKey);
+                            s3Endpoint, region, !clientSideSigning, stsEnabled, accessKey, secretKey);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/management/v1/warehouse"))

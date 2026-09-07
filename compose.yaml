@@ -60,7 +60,7 @@ services:
       start_period: 10s
 
   lakekeeper:
-    image: quay.io/lakekeeper/catalog:v0.10.2
+    image: quay.io/lakekeeper/catalog:v0.13.3
     pull_policy: always
     environment:
       - LAKEKEEPER__PG_ENCRYPTION_KEY=P0d6Ye9v4rXDUpHUSj003yfF4E07SSBj
@@ -84,7 +84,7 @@ services:
     ports:
       - "8181:8181"
   migrate:
-    image: quay.io/lakekeeper/catalog:v0.10.2
+    image: quay.io/lakekeeper/catalog:v0.13.3
     pull_policy: always
     environment:
       - LAKEKEEPER__PG_DATABASE_URL_READ=postgresql://postgres:postgres@db:5432/postgres

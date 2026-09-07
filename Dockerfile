@@ -39,7 +39,7 @@ COPY --from=minio/minio:RELEASE.2025-09-07T16-13-09Z /usr/bin/minio /usr/local/b
 COPY --from=minio/minio:RELEASE.2025-09-07T16-13-09Z /usr/bin/mc    /usr/local/bin/mc
 
 # Pinned to the same version compose uses.
-COPY --from=quay.io/lakekeeper/catalog:v0.10.2 /home/nonroot/lakekeeper /usr/local/bin/lakekeeper
+COPY --from=quay.io/lakekeeper/catalog:v0.13.3 /home/nonroot/lakekeeper /usr/local/bin/lakekeeper
 
 # Spaces runs the container as uid 1000, and Postgres refuses to run as root, so
 # everything below this point runs as an ordinary user.
