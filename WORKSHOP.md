@@ -1114,94 +1114,150 @@ the volume mount means the Job and the Space share storage with zero glue
 
 ## H3 — Publish it, then check whether you needed Spark (25 min)
 
-**Verified end to end on 2026-09-07**: 985,196 rows exported to 8 Parquet files (57 MB) and
-published to a dataset repo by a Job, from a bucket-backed Space.
+> **Work through this on your own.** You need a loaded table — H1 step 9. Everything here runs from
+> your laptop with `curl`, the `hf` CLI and a browser.
 
-**Step 1 — export.** On `/admin`, click **Export to Parquet**. Spark reads the current snapshot and
-writes `data/export/uk-price-paid/`, with the Parquet under `data/` and a dataset card beside it —
-that layout matters, because `pandas` and `pyarrow` refuse a directory that mixes Parquet with
-anything else.
+By the end you will have taken the table you built and turned it into a **public dataset on the Hub
+with a browsable viewer and a SQL console**, then used that to ask whether you needed Spark at all.
 
-**Step 2 — publish it with a Job**, not from the laptop:
+### The Hugging Face pieces, in one place
+
+You have already used the first three. This lab adds the last three.
+
+| Service | What it is | Where you meet it |
+|---|---|---|
+| **Spaces** | a container the Hub runs for you, one published port | your app |
+| **Storage Buckets** | S3-compatible object storage, reachable as a mount *or* over `s3.hf.co` | `lakehouse` and `warehouse` |
+| **Inference Providers** | one token, one base URL, ~20 model providers behind it | F1 and F2 |
+| **Jobs** | run a script on Hugging Face hardware. Mount the same buckets, no local Python | Part 2 |
+| **Datasets** | a git repo built for data, with large files handled for you | Part 2 |
+| **Dataset Viewer** | automatic browsable table + SQL console over any Parquet you publish | Part 3 |
+
+### Part 1 — Export the table (5 min)
+
+**1.1 — Click it.** `/admin` → **Export to Parquet**. Watch the runtime log.
+
+**1.2 — Understand what it did**, because it is not what people expect. It ran a **Spark read of the
+current snapshot and wrote fresh Parquet** — it did *not* copy the files out of the warehouse bucket.
+
+The warehouse already holds Parquet, so copying would be fewer steps. But those files are not the
+table: Iceberg keeps superseded files alongside current ones until snapshots expire, so after a
+compaction or an overwrite **a raw copy silently republishes rows the table no longer contains.**
+Reading through the table resolves the current snapshot's manifest. See `ParquetExporter`'s comment.
+
+**1.3 — Look at what it produced**, in your `lakehouse` bucket under `app/export/uk-price-paid/`:
+
+```
+README.md                     <- dataset card, with the frontmatter the Viewer reads
+data/part-00000-….parquet     <- the Parquet, in a data/ subdirectory
+data/part-00001-….parquet
+```
+
+The `data/` subdirectory is deliberate: `pandas` and `pyarrow` refuse a directory that mixes Parquet
+with anything else, so the card cannot sit beside the files.
+
+### Part 2 — Publish it with a Job (10 min)
+
+**2.1 — What a Job is.** A container Hugging Face runs on its own hardware, once, then throws away.
+You give it a script, the hardware size and any volumes to mount. It is *not* a Space: nothing is
+served, there is no URL, it runs to completion and exits.
+
+**That matters here for one concrete reason.** The export is tens of megabytes, and there are
+twenty-five of you. A Job mounts the same bucket the Space writes to and moves the bytes **inside**
+Hugging Face — nothing crosses the venue wifi.
+
+**2.2 — Run it:**
 
 ```bash
 hf jobs uv run scripts/publish-dataset.py \
   -v hf://buckets/<you>/lakehouse:/mnt/lakehouse \
   -e DATASET_REPO=<you>/uk-price-paid \
+  -e PRIVATE=0 \
   -s HF_TOKEN \
   --flavor cpu-basic
 ```
 
-**Why a Job and not `hf upload`.** The export is tens of megabytes each, times everyone in the room.
-A Job mounts the same bucket the Space writes to and moves the bytes **inside** Hugging Face
-infrastructure — nothing crosses the venue wifi. It is also the only place in the day that Jobs get
-used for something real rather than as a demo.
+| Flag | What it does |
+|---|---|
+| `uv run <script>` | uploads your local script and runs it with `uv`, which installs the dependencies declared in its header |
+| `-v hf://buckets/…:/mnt/lakehouse` | mounts your bucket into the Job at that path |
+| `-e KEY=value` | an environment variable the script reads |
+| `-s HF_TOKEN` | passes your token as a **secret** — not printed, not in the Job's logs |
+| `--flavor cpu-basic` | the smallest hardware. This is a file copy; it needs nothing more |
 
-**`/mnt/lakehouse`, not `/data`.** Jobs reserves `/data` for its own artifacts when running a local
-script and refuses the mount outright: *"Mount path '/data' is reserved for Jobs artifacts"*. The
-script defaults to `/mnt/lakehouse` to match.
+**Not `/data`.** Jobs reserves that path for its own artifacts when running a local script and
+refuses the mount outright: *"Mount path '/data' is reserved for Jobs artifacts"*.
 
-The script finds the export itself, which is worth a word because the path is not obvious: on a Space
-the entrypoint symlinks `/app/data` to `$DATA_ROOT/app`, so it lands at `app/export/<name>` in the
-bucket, while under compose it is `export/<name>`. It checks both. Re-running is safe — it skips the
-commit when nothing changed.
+**2.3 — Why `PRIVATE=0`, and think before you run it.** The script defaults to a **private** dataset.
+Public is what you want here, for a reason worth knowing:
 
-### Which bucket, and why it is not the one you expect
+> **The Dataset Viewer does not work on private datasets for free accounts.** You get
+> *"Not supported: … Private datasets are only supported for PRO users and Enterprise Hub
+> organizations."* Publish private and Part 3 simply will not happen.
 
-The Job mounts **`lakehouse`**, not `warehouse` — which reads backwards, so say it out loud:
+Public is also the right call for *this* data: it is UK Land Registry Price Paid data, already public
+under the Open Government Licence, and the card the exporter wrote says so. **That would not be true
+of your own company's data** — which is exactly the judgement the flag is asking you to make.
 
-| Bucket | Holds | Written by |
-|--------|-------|------------|
-| `warehouse` | the live Iceberg table: `<uuid>/<uuid>/data/*.parquet` and `metadata/` | Spark, over `s3.hf.co` |
-| `lakehouse` (mounted at `/data`) | `app/export/<name>/` — plain Parquet plus a dataset card | the **Export to Parquet** button |
+**2.4 — Re-running is safe.** The script skips the commit when nothing changed, so a second run says
+*"No files have been modified since last commit"* rather than making an empty one.
 
-**Why not publish the warehouse Parquet directly?** It is already Parquet, and copying it would skip
-a step. But the files in that bucket are not the table. Iceberg keeps superseded files alongside
-current ones until snapshots expire, so after a compaction, an overwrite or a `MERGE`, a raw copy
-**quietly republishes rows the table no longer contains**. Reading through the table makes Spark
-resolve the current snapshot's manifest, so the export is what the table actually is — and you get
-to pick the file count and give the files names a human can read.
+### Part 3 — The Dataset Viewer (5 min)
 
-### So what is the warehouse for?
+**3.1 — Open it:** `https://huggingface.co/datasets/<you>/uk-price-paid`
 
-This is the question the room will ask, and the answer is the point of the whole day.
+Give it a minute after the Job finishes — the Hub indexes the Parquet in the background.
 
-**The warehouse is the definitive copy.** It is the thing Spark, Trino, Flink, PyIceberg and DuckDB's
-Iceberg extension can all read *concurrently*, with snapshot isolation, time travel and safe
-concurrent writes. What makes that work is that the table is not "the files in the bucket" — it is
-**the catalog plus the manifests**, which say precisely which files belong to the current snapshot.
-That indirection is what lets one engine compact while another reads, and it is why a plain `ls` of
-the bucket tells you nothing.
+**3.2 — What you get, for free, without configuring anything:**
 
-**The export is not a second source of truth, it is a serving copy** — a flat, self-describing
-snapshot for everything that does *not* speak Iceberg: the Hub's Dataset Viewer, `pd.read_parquet`,
-someone's notebook. It is stale the moment the table changes, and that is fine, because that is what
-publishing means.
+- a **browsable table** — paginated, sortable, with the column types inferred
+- **per-column statistics** — distributions, null counts, min/max
+- a **SQL console** button, which is DuckDB running in your browser against the Parquet
+- an auto-generated **API endpoint** for rows and search
 
-If an attendee objects that this is two copies of the same data — good. That is the right instinct,
-and the answer is that they are for different readers: one is a live table with transactions, the
-other is a file anyone can download.
+**3.3 — Why it works.** The `README.md` the exporter wrote carries frontmatter:
 
-Then open the repo page: the **Dataset Viewer** and its SQL console are just *there*, for free, over
-the data they loaded twenty minutes ago.
+```yaml
+configs:
+  - config_name: default
+    data_files: "data/*.parquet"
+```
 
-### Now the honest experiment. Same question, three engines
+That is the whole contract. The Viewer is not magic — it reads that, finds the Parquet, and indexes
+it. Publish Parquet without a card and you get nothing.
+
+**3.4 — Use the SQL console.** Click it and run:
+
+```sql
+SELECT town, COUNT(*) AS sales, ROUND(AVG(price)) AS avg_price
+FROM train
+GROUP BY town
+ORDER BY sales DESC
+LIMIT 20;
+```
+
+No install, no credentials, no cluster.
+
+### Part 4 — The honest experiment (5 min)
+
+Same question, three engines. Time each.
 
 | Engine | How |
-|--------|-----|
-| Spark + Iceberg | the app's Run Query |
-| DuckDB over the published Parquet | `hf datasets sql "SELECT town, avg(price) FROM 'hf://datasets/<you>/uk-price-paid/data/*.parquet' GROUP BY town"` |
-| Hub Dataset Viewer SQL console | in the browser, no install |
+|---|---|
+| Spark + Iceberg | your app's **Run Query** |
+| DuckDB in the browser | the Viewer's SQL console |
+| DuckDB locally | `hf datasets sql "SELECT … FROM 'hf://datasets/<you>/uk-price-paid/data/*.parquet'"` |
 
-`hf datasets sql` needs DuckDB locally (`brew install duckdb`, or `pip install duckdb`). If the room
-has not got it, use the Hub's SQL console instead — same engine, nothing to install, and it makes the
-point just as well.
+`hf datasets sql` needs DuckDB installed (`brew install duckdb`, or `pip install duckdb`). If you
+have not got it, the browser console makes the point just as well.
 
-Time all three on one year, then on eleven. **The crossover is the lesson.** For a single year on
-one machine, DuckDB will very likely win, and saying so out loud buys enormous credibility — the
-room already suspects it. Spark's case is the eleven-year load, the multi-node future, and Iceberg's
-snapshots and schema evolution, not the single-node scan. Make that argument with numbers the
-attendees generated themselves rather than asserting it from a slide.
+**The crossover is the lesson.** For one year on one machine, **DuckDB will very likely win** — and
+saying so out loud buys enormous credibility, because the room already suspects it. Spark's case is
+the eleven-year load, the multi-node future, and Iceberg's snapshots and schema evolution. It is not
+the single-node scan.
+
+**Answer in writing:** at what data size would your answer flip, and what would you measure to find
+out?
 
 **Useful anywhere** ✅✅ knowing when *not* to reach for Spark is a career skill · **Better on HF**
 ✅ the viewer, the SQL console and Xet dedup come free with the upload
