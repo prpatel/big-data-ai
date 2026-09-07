@@ -79,6 +79,8 @@ model's only job is prose: it must not produce a number that isn't already in th
 That last constraint — **compute first, narrate second** — is the single most useful pattern in this
 whole document, and this is the ticket where it's most obviously right.
 
+**Step-by-step build guide:** [https://claude.ai/code/artifact/fc399127-31ae-415b-a336-f7bf5c4232bd](https://claude.ai/code/artifact/fc399127-31ae-415b-a336-f7bf5c4232bd)
+
 **Why it's the flagship** This is a product people pay for. It also happens to teach evidence-based
 generation, graceful degradation, and the difference between an answer and a defensible answer.
 
@@ -109,6 +111,8 @@ ordering (constrain, then ask) is the transferable lesson.
 
 **Debrief question** "What happens when the query returns one number?" Most teams won't have
 handled it, and a giant single-bar chart in a client deck is worse than a table.
+
+**Step-by-step build guide:** [https://claude.ai/code/artifact/5d0a622c-5893-44db-8b9b-8552c7e16b11](https://claude.ai/code/artifact/5d0a622c-5893-44db-8b9b-8552c7e16b11)
 
 <sub>Under the hood: a second structured-output call returning a Vega-Lite spec, validated against
 the computed result shape before it renders.</sub>
