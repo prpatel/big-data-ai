@@ -869,72 +869,134 @@ questions is fine; do not put fifty in the CSV and leave it looping.
 
 ## F2 — Model bake-off on Inference Providers (30 min)
 
-Now the eval harness earns its keep — and **there is no code to write first.** The model is already
-a runtime setting: the **Model Picker** at the bottom of `/admin` swaps it per request, with six
-models across six providers preloaded and an **OTHER** box for any `model:provider` string.
+> **Work through this on your own.** It needs F1's eval set finished — at minimum three questions
+> with expected answers you derived yourself. Without that there is nothing to compare.
+
+**There is no code to write.** The model is already a runtime setting: the **Model Picker** at the
+bottom of `/admin` changes it per request, so a bake-off costs no deploys at all. At roughly 90
+seconds a deploy, doing this the obvious way would eat the whole hour.
 
 ```java
-// AiService, already in the code they cloned
+// AiService, already in the code you cloned
 String model = modelStore.get();                                   // whatever /admin is set to
 OpenAiChatOptions.Builder perRequest = OpenAiChatOptions.builder().model(model);
 ```
 
-| Preloaded | Provider |
-|---|---|
-| `Qwen/Qwen3.6-27B` | ovhcloud |
-| `Qwen/Qwen3.6-35B-A3B` | scaleway |
-| `Qwen/Qwen3-Coder-Next` | novita |
-| `openai/gpt-oss-120b` | groq |
-| `google/gemma-3-27b-it` | deepinfra |
-| `google/gemma-3-1b-it` | featherless-ai |
+### Part 1 — Baseline (5 min)
 
-So the bake-off is: **set the picker, run F1's harness, write down the four scores and the latency,
-repeat.** No deploys at all — which is the point, because at ~90 s a deploy, doing this the obvious
-way would eat the hour.
-
-Two things worth watching for, both real. `reasoning_effort` is not portable: `none` is fine on some
-providers and returns `400: must be one of low, medium, or high` on others, so `AiService` drops it
-and retries once rather than making the room care. And the 1B model is in the list deliberately —
-it is the one most likely to ignore the JSON contract and hand back bare SQL, which is exactly the
-failure F1's structured output makes visible.
-
-> Don't reach for Space variables here. `SPRING_AI_OPENAI_CHAT_MODEL` does bind onto
-> `spring.ai.openai.chat.model` via relaxed binding, but changing a variable puts the Space through
-> `RUNNING_BUILDING` — it's a cached rebuild, roughly the cost of a push (measured 2026-09-02).
-> Variables are useful because they can't introduce a compile error, not because they're free.
-
-"the model is a request parameter, not a deployment" is also the right answer outside the workshop,
-which makes this a good twenty minutes regardless of the bake-off.
+**1.1 — Run the harness once and keep the output.** It prints the model it used, so each run
+labels itself:
 
 ```bash
-# What's actually being served right now, and by whom
+./scripts/eval.sh <you>/big-data-ai
+```
+
+```
+model:     Qwen/Qwen3-Coder-Next:novita
+questions: scripts/questions.csv
+
+id    generated ran     correct   ms
+----------------------------------------------------------
+q01   yes       yes     yes       3000
+```
+
+**1.2 — Start a table.** Paper is fine. One row per model:
+
+| Model | generated | ran | correct | median ms |
+|---|---|---|---|---|
+| `Qwen/Qwen3-Coder-Next:novita` (default) | | | | |
+
+### Part 2 — Swap models (15 min)
+
+**2.1 — Change the model.** `/admin` → **Model Picker** at the bottom → pick one → **Save**. It
+applies to the *next* question. No restart, no rebuild.
+
+**2.2 — Re-run and record.** Same command, same questions. Work through these, and do the 1B one
+**last** — it is there to fail:
+
+| Model | Provider | Why it is in the list |
+|---|---|---|
+| `Qwen/Qwen3.6-27B` | ovhcloud | the previous default — a bigger general model |
+| `openai/gpt-oss-120b` | groq | a much larger model on a very fast provider |
+| `google/gemma-3-27b-it` | deepinfra | a different family entirely |
+| `google/gemma-3-1b-it` | featherless-ai | **deliberately too small.** Run it last |
+
+**2.3 — What the 1B model does, and why it matters.** You should get this:
+
+```
+model:     google/gemma-3-1b-it:featherless-ai
+id    generated ran     correct   ms
+q01   no        no      no        6000
+```
+
+**Zero on the first gate.** Not "wrong answers" — *nothing usable came back at all*. The system
+prompt asks for JSON, and this model replies with something else, so `AiService` refuses to guess
+and the endpoint returns an error rather than a query.
+
+That is F1's structured output doing its job. **A model that cannot follow the output contract fails
+loudly and early**, instead of returning prose that gets executed as SQL. Try it in the app itself
+and read what actually comes back — the page shows you the raw reply.
+
+**2.4 — Note the latency column too.** Small does not mean fast: the 1B model was *slower* than the
+default here, because the provider matters as much as the parameter count.
+
+### Part 3 — Two settings that change the answer (10 min)
+
+Both are in `src/main/resources/application.properties`. Changing them **is** a deploy — edit,
+commit, `git push hf main`, wait for the build. Do one, not both, and compare against your baseline.
+
+**3.1 — Thinking.** Line 40:
+
+```properties
+app.ai.reasoning-effort=none
+```
+
+The file records **21.7 s with thinking versus 1.2 s without**, measured on `Qwen/Qwen3.6-27B`. Set
+it to `low` and re-run. **Does accuracy actually improve enough to pay for that?** Measure it.
+
+> **Use `app.ai.reasoning-effort`, not `spring.ai.openai.chat.reasoning-effort`.** The comment above
+> that line explains why: anything set on the Spring property becomes a *client default*, and runtime
+> options merge over defaults rather than replacing them — so it can never be *not* sent. That breaks
+> portability, because `none` is fine on ovhcloud and returns `400: must be one of low, medium, or
+> high` on groq. `AiService` sends this per request and retries without it if a provider objects.
+
+**3.2 — Temperature.** Line 56:
+
+```properties
+spring.ai.openai.chat.temperature=0.0
+```
+
+Raise it to `0.8`, push, and **run the harness twice without changing anything else.** Watch
+reproducibility fall apart. This is the concrete version of the question F1 left you with: how many
+runs before you would believe a change had helped?
+
+### Part 4 — Decide, and say why (5 min)
+
+Look at your table and answer in writing:
+
+1. **Which model would you ship**, and what did you trade away to pick it?
+2. **Was the biggest model the best?** It usually is not, for sixteen columns of text-to-SQL.
+3. **What would you need to see** to change your mind — more questions, harder questions, more runs?
+
+Then pool the room's tables. Attendees who wrote different questions will disagree about which model
+wins, and **that disagreement is the lesson**: your eval set defines "best", and it is only as good
+as the questions in it.
+
+### What is actually available right now
+
+```bash
 hf models list --warm --limit 40
 hf models list --inference-provider groq --warm
 hf models list --inference-provider cerebras --warm
 ```
 
-Each attendee runs the ten-question eval against four configurations and fills in a table:
+The picker also has an **OTHER** box for any `model:provider` string, so anything in those lists can
+be tried without touching the catalogue. Routing suffixes work too — `:fastest`, `:cheapest` — which
+are worth a run each if you have time.
 
-| Config | What it selects |
-|--------|-----------------|
-| `Qwen/Qwen3.6-27B:ovhcloud` | today's default — a pinned provider |
-| `openai/gpt-oss-120b:fastest` | highest throughput available |
-| `openai/gpt-oss-120b:cheapest` | lowest price per output token |
-| `<a small model>` | is 27B even needed for text-to-SQL over 16 columns? |
-
-Columns: **accuracy /10 · median latency · cost**. Then pool the room's results on a whiteboard.
-
-Two settings that materially change the answer and are already in `application.properties`, so
-have them try flipping each:
-
-- `spring.ai.openai.chat.reasoning-effort=none` — the file records 21.7 s with thinking vs 1.2 s
-  without. Does accuracy actually drop? Measure it, don't assume.
-- `spring.ai.openai.chat.temperature=0.0` — raise it and watch reproducibility fall apart.
-
-**What they learn** Provider routing as a real dial (`:fastest` / `:cheapest` / `:preferred` /
-`:provider`); that the biggest model is often the wrong default; that "which model" is an empirical
-question they now have the tooling to answer. Everything bills to each attendee's own credit
-balance, so there is nothing to configure and nothing shared to exhaust.
+**What you learn** Provider routing as a real dial; that the biggest model is often the wrong
+default; that "which model" is an empirical question you now have the tooling to answer. Everything
+bills to your own credits, so there is nothing shared to exhaust.
 
 **Useful anywhere** ✅ · **Better on HF** ✅✅ one token, one base URL, ~20 providers, no per-vendor
 signup — this comparison is a week of procurement anywhere else

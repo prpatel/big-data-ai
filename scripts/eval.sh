@@ -25,6 +25,14 @@ AUTH=(-H "Authorization: Bearer ${TOKEN}")
 
 [[ -f "$CSV" ]] || { echo "no such file: $CSV" >&2; exit 1; }
 
+# Which model is answering. Without this a bake-off is four tables that do not say what
+# produced them, and the whole point is comparing them.
+MODEL=$(curl -s "${HOST}/admin" "${AUTH[@]}" --max-time 60 \
+        | grep -oE '<option[^>]*selected[^>]*>[^<]+' | sed 's/.*>//' | head -1)
+echo "model:     ${MODEL:-unknown}"
+echo "questions: ${CSV}"
+echo
+
 gen=0; ran=0; ok=0; total=0
 printf "%-5s %-9s %-7s %-9s %s\n" "id" "generated" "ran" "correct" "ms"
 printf -- "----------------------------------------------------------\n"
@@ -35,12 +43,18 @@ tail -n +2 "$CSV" | while IFS=, read -r id question expected; do
     total=$((total + 1))
 
     started=$(date +%s000)
-    sql=$(curl -s -G "${HOST}/ai/generateQuery" --data-urlencode "query=${question}" \
-              "${AUTH[@]}" --max-time 180)
+    # Capture the status separately. A model that ignores the JSON contract makes the endpoint
+    # throw, and Spring answers 500 with a JSON error body - which is non-empty text that looks
+    # like an answer. Scoring that as "generated" would point you at the wrong gate: the model
+    # produced nothing usable, which is a generation failure, not an execution one.
+    response=$(curl -s -w '\n%{http_code}' -G "${HOST}/ai/generateQuery" \
+                   --data-urlencode "query=${question}" "${AUTH[@]}" --max-time 180)
+    status="${response##*$'\n'}"
+    sql="${response%$'\n'*}"
     elapsed=$(( $(date +%s000) - started ))
 
     g="no"; r="no"; c="no"
-    if [[ -n "${sql}" && "${sql}" != *"<html"* ]]; then
+    if [[ "${status}" == "200" && -n "${sql}" && "${sql}" != *"<html"* ]]; then
         g="yes"; gen=$((gen + 1))
         out=$(curl -s -X POST "${HOST}/runquery" \
                   --data-urlencode "generatedsql=${sql}" --data-urlencode "maxrows=50" \
