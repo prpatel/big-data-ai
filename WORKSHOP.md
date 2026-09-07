@@ -94,7 +94,7 @@ Optional but useful: an SSH key added at hf.co/settings/keys (needed for the Dev
 
 | # | Task | Why it matters |
 |---|------|----------------|
-| 1 | **Get credits onto each attendee's account**, and confirm at least one has landed before the day | Jobs need a positive credit balance, and so does inference past the free tier. Credits on their own account mean no org, no `--namespace`, and no `X-HF-Bill-To` — it all bills to them. Budget ~$2 each; $5 is generous. |
+| 1 | **Get credits onto each attendee's account**, and confirm at least one has landed before the day | Jobs need a positive credit balance, and so does inference past the free tier. Credits on their own account mean no org, no `--namespace`, and no `X-HF-Bill-To` — it all bills to them. Budget ~$2 each; $5 is generous. **The Space itself now costs too**: `--flavor cpu-upgrade` is a paid tier, billed for as long as the Space is awake, so tell them to pause it at the end of the day. |
 | 2 | **Decide whether the Space runs on MinIO or on a bucket** | Both work. Bucket-backed means the data is real Parquet on the Hub from minute one, and H2 becomes a demo rather than an exercise; MinIO-backed keeps H2 as a hands-on lab. Either way, hand out the recipe — it is not discoverable. |
 | 3 | Pre-download `pp-2015.csv` into a **public** HF bucket or dataset repo | The Land Registry origin is one shared 170 MB download for the whole room. Serving it from HF is faster *and* demonstrates the point. |
 | 4 | Decide the **fallback venue** for the AI labs | If the venue's egress is bad, inference still works (it's a small API call) but Space builds may not. Have a pre-built Space per attendee as plan B. |
@@ -131,10 +131,10 @@ Rough, for 25 attendees over 4 hours:
 
 | Item | Basis | Estimate |
 |------|-------|----------|
-| Spaces (cpu-upgrade, if you upgrade at all) | 25 × 4 h × ~$0.03/h | ~$3 |
+| Spaces — `cpu-upgrade`, now the documented default | 25 × 4 h × ~$0.03/h | ~$3 |
 | Jobs — H4 | 25 × 15 min × $1.90/h (`cpu-performance`) | ~$12 |
 | Jobs — if you use `cpu-upgrade` instead | 25 × 15 min × $0.03/h | ~$0.20 |
-| Inference — Labs 1, 2 | 25 × ~150 calls, small open models | ~$5–15 |
+| Inference — F1, F2 | 25 × ~150 calls, small open models | ~$5–15 |
 | Buckets | free allowance | $0 |
 
 **≈ $20–40 total.** That number is itself a slide: the whole workshop costs less than lunch for
@@ -478,11 +478,12 @@ name the cause:
 
 ```bash
 # 1. Get the code
-git clone <workshop-repo-url> big-data-ai && cd big-data-ai
+git clone https://github.com/prpatel/big-data-ai big-data-ai && cd big-data-ai
 hf auth login --token hf_xxx --add-to-git-credential   # a no-op if they did the pre-work
 
 # 2. Your own Space — Docker SDK, private
-hf repos create <you>/big-data-ai --type space --sdk docker --private
+hf repos create <you>/big-data-ai --repo-type space --sdk docker --private --flavor cpu-upgrade
+#   ^ cpu-upgrade, not the free cpu-basic: this is what the load was measured on
 
 # 3. TWO buckets. They are not the same kind of thing — see below.
 hf buckets create <you>/lakehouse --private     # files: CSVs + the catalog dump
