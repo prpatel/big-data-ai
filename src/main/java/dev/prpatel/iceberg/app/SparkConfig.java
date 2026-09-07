@@ -49,7 +49,12 @@ public class SparkConfig {
                 // Provide the URI for your LakeKeeper REST endpoint
                 .config("spark.sql.catalog.lakekeeper.uri", catalogUri)
                 // Specify the warehouse name
-                .config("spark.sql.catalog.lakekeeper.warehouse", "lakehouse");
+                .config("spark.sql.catalog.lakekeeper.warehouse", "lakehouse")
+                // Hadoop's LocalFileSystem writes a hidden .<name>.crc checksum beside every file
+                // it produces. On a Space the export directory is a mounted bucket, and the mount
+                // refuses those names - "._SUCCESS.crc (Permission denied)" - which fails the whole
+                // export. RawLocalFileSystem is the same filesystem without the checksum sidecars.
+                .config("spark.hadoop.fs.file.impl", "org.apache.hadoop.fs.RawLocalFileSystem");
 
         if (clientSideSigning) {
             builder.config("spark.sql.catalog.lakekeeper.s3.remote-signing-enabled", "false")
