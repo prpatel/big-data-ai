@@ -326,10 +326,23 @@ public class IcebergService {
             System.out.println("✅ Warehouse created successfully");
         } catch (Exception e) {
             String message = String.valueOf(e.getMessage());
-            // A 400 here is not always "already exists" - it is also how an invalid storage
-            // profile comes back - so say what the catalog actually returned either way.
-            if (message.contains("409") || message.contains("already exists")) {
-                System.out.println("Warehouse already exists - skipping...");
+            // "already exists" and "overlaps with existing warehouse" both mean the same thing:
+            // lakehouse is registered, possibly against a stale storage profile. Update it rather
+            // than skipping, so re-clicking Setup after changing a variable actually applies it.
+            if (message.contains("already exists") || message.contains("overlaps")) {
+                try {
+                    String id = findWarehouseId(client, baseUrl);
+                    if (id == null) {
+                        System.err.println("Warehouse exists but could not be found to update: " + message);
+                    } else {
+                        updateWarehouseStorage(client, baseUrl, id, s3Bucket, s3Endpoint,
+                                clientSideSigning, s3AccessKey, s3SecretKey, s3Region,
+                                s3StsEnabled, s3KeyPrefix);
+                        System.out.println("✅ Warehouse already existed; storage profile updated");
+                    }
+                } catch (Exception inner) {
+                    System.err.println("Could not update the existing warehouse: " + inner);
+                }
             } else {
                 System.err.println("Could not create the warehouse: " + e);
             }
@@ -446,6 +459,76 @@ public class IcebergService {
 
     // Note: This interacts with the LakeKeeper Management API, not the Iceberg REST Catalog Protocol.
     // Therefore, we use HttpClient instead of RESTCatalog.
+    /** The storage profile and its credential, shared by warehouse creation and updates. */
+    private static String storageBody(String storageBucket, String s3Endpoint, boolean clientSideSigning,
+                                      String accessKey, String secretKey, String region,
+                                      boolean stsEnabled, String keyPrefix) {
+        return """
+                "storage-profile": {
+                    "type": "s3",
+                    "bucket": "%s",
+                    "key-prefix": "%s",
+                    "assume-role-arn": null,
+                    "endpoint": "%s",
+                    "region": "%s",
+                    "path-style-access": true,
+                    "flavor": "s3-compat",
+                    "remote-signing-enabled": %s,
+                    "sts-enabled": %s
+                },
+                "storage-credential": {
+                    "type": "s3",
+                    "credential-type": "access-key",
+                    "aws-access-key-id": "%s",
+                    "aws-secret-access-key": "%s"
+                }
+            """.formatted(storageBucket, keyPrefix == null ? "" : keyPrefix,
+                          s3Endpoint, region, !clientSideSigning, stsEnabled, accessKey, secretKey);
+    }
+
+    /**
+     * Point an existing warehouse at this storage profile.
+     *
+     * Creation returns 400 once a warehouse called "lakehouse" is already registered, and the old
+     * profile then survives every later Setup - which is how a warehouse ends up still remote-signing
+     * after the setting that disables it has been fixed. Updating in place makes Setup idempotent in
+     * the way people already assume it is: change a variable, click it again, and it takes.
+     */
+    public static void updateWarehouseStorage(HttpClient client, String baseUrl, String warehouseId,
+                                              String storageBucket, String s3Endpoint,
+                                              boolean clientSideSigning, String accessKey,
+                                              String secretKey, String region, boolean stsEnabled,
+                                              String keyPrefix) throws Exception {
+        String payload = "{\n" + storageBody(storageBucket, s3Endpoint, clientSideSigning,
+                accessKey, secretKey, region, stsEnabled, keyPrefix) + "\n}";
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/management/v1/warehouse/" + warehouseId + "/storage"))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(payload))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() >= 300) {
+            throw new RuntimeException("Failed to update the warehouse storage profile: "
+                    + response.statusCode() + " " + response.body());
+        }
+    }
+
+    /** The id of the warehouse called "lakehouse", or null if there is not one. */
+    public static String findWarehouseId(HttpClient client, String baseUrl) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + "/management/v1/warehouse"))
+                .GET().build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() >= 300) {
+            return null;
+        }
+        // Small, fixed-shape response; a regex avoids pulling a JSON parser in for one field.
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\\{\\s*\"id\"\\s*:\\s*\"([^\"]+)\"[^}]*?\"name\"\\s*:\\s*\"lakehouse\"")
+                .matcher(response.body());
+        return m.find() ? m.group(1) : null;
+    }
+
     public static void createWarehouse(HttpClient client, String baseUrl, String storageBucket,
                                        String s3Endpoint, boolean clientSideSigning,
                                        String accessKey, String secretKey,
