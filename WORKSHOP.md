@@ -51,7 +51,7 @@ matters. No organisation is involved.
 
 ```bash
 curl -LsSf https://hf.co/cli/install.sh | bash -s
-hf auth login --add-to-git-credential     # paste the token; also lets git push
+hf auth login --token hf_xxx --add-to-git-credential     # paste the token; also lets git push
 hf auth whoami                            # confirms which account the token belongs to
 ```
 
@@ -461,7 +461,7 @@ hf spaces variables add <you>/big-data-ai \
   --env AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 
 # 7. deploy
-hf auth login --add-to-git-credential
+hf auth login --token hf_xxx --add-to-git-credential
 git remote add hf https://huggingface.co/spaces/<you>/big-data-ai
 git push --force hf main
 hf spaces logs <you>/big-data-ai --build --follow
@@ -521,7 +521,7 @@ name the cause:
 ```bash
 # 1. Get the code
 git clone <workshop-repo-url> big-data-ai && cd big-data-ai
-hf auth login --add-to-git-credential          # paste the token; also lets git push over HTTPS
+hf auth login --token hf_xxx --add-to-git-credential   # --token is required, see below
 
 # 2. Your own Space — Docker SDK, private
 hf repos create <you>/big-data-ai --type space --sdk docker --private
@@ -618,6 +618,10 @@ each touches. This is dead time otherwise; use it.
 
 ### Traps to pre-empt — every one of these actually happened
 
+- **`--add-to-git-credential` is silently ignored by the browser login.** It only applies when the
+  token is passed with `--token`. Run `hf auth login` on its own and the flag does nothing, so the
+  `git push` in step 6 has no credentials and prompts — which looks like a permissions problem and
+  is not. Pass the token directly, which they have on the clipboard anyway.
 - **The admin buttons always answer *"… operation initiated"*** whether or not the work succeeded.
   `AdminController` adds that message unconditionally, before the service call returns. Teach
   `hf spaces logs <space> --follow` in the first ten minutes; they will need it all day.
