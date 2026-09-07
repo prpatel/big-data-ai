@@ -9,10 +9,13 @@ only the `hf` CLI they already installed. The Space's data volume is mounted rea
 the Job reads the parquet the app wrote and uploads it to a dataset repo:
 
     hf jobs uv run scripts/publish-dataset.py \
-      -v hf://buckets/<you>/lakehouse:/data \
+      -v hf://buckets/<you>/lakehouse:/mnt/lakehouse \
       -e DATASET_REPO=<you>/uk-price-paid \
       -s HF_TOKEN \
       --flavor cpu-basic
+
+Not /data: Jobs reserves that path for its own artifacts when running a local script, and
+refuses the mount outright. /mnt/lakehouse is the default this script looks in; MOUNT overrides it.
 
 Where the export sits inside the bucket depends on how the app was running when it wrote it,
 which is not obvious and is easy to get wrong:
@@ -31,7 +34,12 @@ from pathlib import Path
 
 from huggingface_hub import HfApi
 
-MOUNT = Path(os.environ.get("MOUNT", "/data"))
+# /mnt/lakehouse rather than /data: Jobs reserves /data for its own artifacts and rejects a
+# volume mounted there, so the documented command mounts elsewhere and this matches it. Falls
+# back to /data for anywhere that is not a Job - a laptop, or the Space's own filesystem.
+_DEFAULT_MOUNTS = ("/mnt/lakehouse", "/data")
+MOUNT = Path(os.environ.get("MOUNT") or next(
+    (m for m in _DEFAULT_MOUNTS if Path(m).is_dir()), _DEFAULT_MOUNTS[0]))
 NAME = os.environ.get("EXPORT_NAME", "uk-price-paid")
 REPO = os.environ.get("DATASET_REPO")
 PRIVATE = os.environ.get("PRIVATE", "1") not in ("0", "false", "False")

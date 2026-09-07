@@ -788,12 +788,16 @@ Rewrite ingestion as a Job that mounts the same bucket:
 ```bash
 hf jobs uv run ingest.py \
   --with duckdb --with huggingface_hub \
-  -v hf://buckets/<you>/warehouse:/data \
+  -v hf://buckets/<you>/warehouse:/mnt/warehouse \
   --flavor cpu-performance \
   --timeout 1h
 
 hf jobs logs <job-id> --follow
 ```
+
+**Not `/data`.** Jobs reserves that path for its own artifacts when running a local script and
+rejects the mount: *"Mount path '/data' is reserved for Jobs artifacts"*. Any other path works; H3
+uses `/mnt/lakehouse` for the same reason.
 
 Then right-size it: run the same job on `cpu-basic` ($0.01/h) and `cpu-performance` ($1.90/h) and
 compare wall-clock against cost. The finding is usually that the expensive flavor is *cheaper per
@@ -823,22 +827,52 @@ the volume mount means the Job and the Space share storage with zero glue
 
 ## H3 — Publish it, then check whether you needed Spark (25 min)
 
-Export the Iceberg table to Parquet and publish it as a dataset repo:
+**Verified end to end on 2026-09-07**: 985,196 rows exported to 8 Parquet files (57 MB) and
+published to a dataset repo by a Job, from a bucket-backed Space.
+
+**Step 1 — export.** On `/admin`, click **Export to Parquet**. Spark reads the current snapshot and
+writes `data/export/uk-price-paid/`, with the Parquet under `data/` and a dataset card beside it —
+that layout matters, because `pandas` and `pyarrow` refuse a directory that mixes Parquet with
+anything else.
+
+**Step 2 — publish it with a Job**, not from the laptop:
 
 ```bash
-hf upload <you>/uk-price-paid ./out --type dataset
+hf jobs uv run scripts/publish-dataset.py \
+  -v hf://buckets/<you>/lakehouse:/mnt/lakehouse \
+  -e DATASET_REPO=<you>/uk-price-paid \
+  -s HF_TOKEN \
+  --flavor cpu-basic
 ```
 
-Write the dataset card frontmatter, then open the repo page: the **Dataset Viewer** and its SQL
-console are just *there*, for free, over the data they loaded twenty minutes ago.
+**Why a Job and not `hf upload`.** The export is tens of megabytes each, times everyone in the room.
+A Job mounts the same bucket the Space writes to and moves the bytes **inside** Hugging Face
+infrastructure — nothing crosses the venue wifi. It is also the only place in the day that Jobs get
+used for something real rather than as a demo.
 
-Now the honest experiment. Same question, three engines:
+**`/mnt/lakehouse`, not `/data`.** Jobs reserves `/data` for its own artifacts when running a local
+script and refuses the mount outright: *"Mount path '/data' is reserved for Jobs artifacts"*. The
+script defaults to `/mnt/lakehouse` to match.
+
+The script finds the export itself, which is worth a word because the path is not obvious: on a Space
+the entrypoint symlinks `/app/data` to `$DATA_ROOT/app`, so it lands at `app/export/<name>` in the
+bucket, while under compose it is `export/<name>`. It checks both. Re-running is safe — it skips the
+commit when nothing changed.
+
+Then open the repo page: the **Dataset Viewer** and its SQL console are just *there*, for free, over
+the data they loaded twenty minutes ago.
+
+### Now the honest experiment. Same question, three engines
 
 | Engine | How |
 |--------|-----|
 | Spark + Iceberg | the app's Run Query |
-| DuckDB over the published Parquet | `hf datasets sql "SELECT town, avg(price) FROM … GROUP BY town"` |
+| DuckDB over the published Parquet | `hf datasets sql "SELECT town, avg(price) FROM 'hf://datasets/<you>/uk-price-paid/data/*.parquet' GROUP BY town"` |
 | Hub Dataset Viewer SQL console | in the browser, no install |
+
+`hf datasets sql` needs DuckDB locally (`brew install duckdb`, or `pip install duckdb`). If the room
+has not got it, use the Hub's SQL console instead — same engine, nothing to install, and it makes the
+point just as well.
 
 Time all three on one year, then on eleven. **The crossover is the lesson.** For a single year on
 one machine, DuckDB will very likely win, and saying so out loud buys enormous credibility — the
