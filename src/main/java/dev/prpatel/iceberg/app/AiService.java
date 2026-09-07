@@ -23,10 +23,18 @@ class AiService {
     private final boolean useChatTemplateKwargs;
     private final String reasoningEffort;
 
+    // Bills inference to an organisation instead of the account the token belongs to. Empty by
+    // default: someone running on credits granted to their own account is not an org member, and
+    // naming an org they cannot bill to fails every call with 403 "does not have sufficient
+    // permissions ... on behalf of user <them>". Set it only when the token's inference permission
+    // lives on the org rather than the personal account.
+    private final String billTo;
+
     public AiService(ChatClient.Builder chatClientBuilder,
                      PromptStore promptStore,
                      ModelStore modelStore,
                      SchemaStore schemaStore,
+                     @Value("${app.ai.bill-to:}") String billTo,
                      @Value("${app.ai.reasoning-effort:}") String reasoningEffort,
                      @Value("${app.ai.use-chat-template-kwargs:false}") boolean useChatTemplateKwargs) {
 
@@ -34,6 +42,7 @@ class AiService {
         this.modelStore = modelStore;
         this.schemaStore = schemaStore;
         this.reasoningEffort = reasoningEffort;
+        this.billTo = billTo == null ? "" : billTo.trim();
         this.useChatTemplateKwargs = useChatTemplateKwargs;
 
         OpenAiChatOptions.Builder options = OpenAiChatOptions.builder();
@@ -78,6 +87,9 @@ class AiService {
         if (useChatTemplateKwargs) {
             perRequest.extraBody(Map.of("chat_template_kwargs", Map.of("enable_thinking", false)));
         }
+        if (!billTo.isEmpty()) {
+            perRequest.customHeaders(Map.of("X-HF-Bill-To", billTo));
+        }
         System.out.println("model: " + model + (modelStore.isCustomised() ? " (chosen on /admin)" : " (from application.properties)"));
 
         long startedAt = System.currentTimeMillis();
@@ -96,6 +108,9 @@ class AiService {
             OpenAiChatOptions.Builder withoutEffort = OpenAiChatOptions.builder().model(model);
             if (useChatTemplateKwargs) {
                 withoutEffort.extraBody(Map.of("chat_template_kwargs", Map.of("enable_thinking", false)));
+            }
+            if (!billTo.isEmpty()) {
+                withoutEffort.customHeaders(Map.of("X-HF-Bill-To", billTo));
             }
             llmResponse = ask(withoutEffort, systemPrompt, userPrompt);
         }
