@@ -573,8 +573,38 @@ hf spaces logs <you>/big-data-ai | grep EMBEDDED_MINIO
 #   [init] EMBEDDED_MINIO=0; the warehouse lives in external storage (https://s3.hf.co)
 ```
 
-Then at `https://<you>-big-data-ai.hf.space/admin`: **Setup Environment** → **Download Data**
-(`2015`) → **Load Data** (`2015`). Watch the runtime log for each. Then ask the home page a question.
+```bash
+# ---- 9. load the data. Keep the runtime log from step 8 open while you do this ----
+```
+
+Open **`https://<you>-big-data-ai.hf.space/admin`** — note the `hf.space` subdomain, not the Hub
+page, which is an iframe wrapper and will not proxy `/admin`.
+
+Then three buttons, **in this order, waiting for each**. Every one of them answers *"… operation
+initiated"* whether or not it worked, so the log is the only place the truth is:
+
+| # | Click | Takes | The log line that means it worked |
+|---|---|---|---|
+| 1 | **Setup Environment** | ~10 s | `✅ Warehouse created successfully` — or `✅ Warehouse already existed; storage profile updated` if you have run it before. Both are fine |
+| 2 | **Download Data**, year `2015` | ~1 min | `✅ Downloaded pp-2015.csv` — about 170 MB, straight into your `lakehouse` bucket |
+| 3 | **Load Data**, year `2015` | ~30 s | `✅ Data loaded successfully from data/house_prices/pp-2015.csv` |
+
+**If Setup fails**, the message is a 400 from LakeKeeper and almost always means the S3 credentials
+are wrong — regenerate them and click Setup again. It is idempotent and repairs an existing
+warehouse in place.
+
+**Confirm you actually have data before moving on.** On the home page, clear the question box, paste
+this into the **SQL** box and press **Run Query**:
+
+```sql
+SELECT COUNT(*) FROM lakekeeper.housing.staging_prices
+```
+
+You should get roughly **1,011,752**. If you get `0`, the load did not work — read the runtime log
+rather than clicking Load again.
+
+Now type a question in your own words and press **Generate Query**, then **Run Query**. That is the
+whole app working end to end, and **F1 assumes you have got this far**.
 
 ### Billing — the one thing that differs between you and them
 
