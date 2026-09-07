@@ -59,14 +59,11 @@ hf auth whoami                            # confirms which account the token bel
 
 ```bash
 # inference works, and the credit is on the account
-curl -s https://router.huggingface.co/v1/chat/completions \
-  -H "Authorization: Bearer $(hf auth token)" -H "Content-Type: application/json" \
-  -d '{"model":"openai/gpt-oss-120b:cheapest",
-       "messages":[{"role":"user","content":"say ok"}]}'
+curl -s https://router.huggingface.co/v1/chat/completions -H "Authorization: Bearer $(hf auth token)" -H "Content-Type: application/json" -d '{"model":"openai/gpt-oss-120b:cheapest","messages":[{"role":"user","content":"say ok"}]}'
 
 # the token can WRITE - a read check passes with a read-only token and proves nothing
-hf buckets create $(hf auth whoami | grep -o 'user=[^ ]*' | cut -d= -f2)/preflight --private
-hf buckets delete $(hf auth whoami | grep -o 'user=[^ ]*' | cut -d= -f2)/preflight --yes
+hf buckets create <you>/preflight --private
+hf buckets delete <you>/preflight --yes
 ```
 
 A completion and a clean create/delete means the day will work. Anything else means there is a week
@@ -476,70 +473,108 @@ name the cause:
 - **Write access to repos** — creating the Space and pushing to it
 - **Write access to buckets** — read alone authenticates perfectly and then refuses every upload
 
+Each step below is one command that does one thing. Run them one at a time and read the output —
+several of these fail in ways that only show up three steps later if you paste the lot.
+
 ```bash
-# 1. Get the code
-git clone https://github.com/prpatel/big-data-ai big-data-ai && cd big-data-ai
+# ---- 1. the code -------------------------------------------------------------
+git clone https://github.com/prpatel/big-data-ai big-data-ai
+cd big-data-ai
+```
 
-# 2. Your own Space — Docker SDK, private
+```bash
+# ---- 2. the Space ------------------------------------------------------------
+# cpu-upgrade, not the free cpu-basic: that is what the timings were measured on
 hf repos create <you>/big-data-ai --repo-type space --sdk docker --private --flavor cpu-upgrade
-#   ^ cpu-upgrade, not the free cpu-basic: this is what the load was measured on
+```
 
-# 3. TWO buckets. They are not the same kind of thing — see below.
-hf buckets create <you>/lakehouse --private     # files: CSVs + the catalog dump
-hf buckets create <you>/warehouse --private     # Iceberg data + metadata
+```bash
+# ---- 3. two buckets ----------------------------------------------------------
+# lakehouse holds ordinary files: the CSVs, the catalog dump, the export
+hf buckets create <you>/lakehouse --private
 
-# Only the first is mounted. The second is reached over the S3 API and must NOT be mounted.
+# warehouse holds the Iceberg table, reached over the S3 API and NEVER mounted
+hf buckets create <you>/warehouse --private
+
+# only lakehouse is mounted, as the Space's /data
 hf spaces volumes set <you>/big-data-ai -v hf://buckets/<you>/lakehouse:/data
 
-# 4. S3 credentials for the warehouse bucket — the one step with no CLI.
-#    hf.co/settings/tokens -> your token's ... menu -> Generate S3 credentials
-#    You get an access key starting HFAK... and a secret shown exactly once.
+# confirm the mount took
+hf spaces volumes ls <you>/big-data-ai
+```
 
-# 5. Tell the app where the warehouse lives and how to sign for it
-hf spaces variables add <you>/big-data-ai \
-  -e APP_S3_ENDPOINT=https://s3.hf.co \
-  -e APP_S3_BUCKET=<you> \
-  -e APP_S3_KEY_PREFIX=warehouse \
-  -e APP_S3_STS_ENABLED=false \
-  -e APP_S3_CREATE_BUCKET=false \
-  -e APP_S3_CLIENT_SIDE_SIGNING=true \
-  -e APP_WAREHOUSE_EXPLICIT_LOCATION=false
+**4. S3 credentials — the one step with no CLI.** In the browser:
+[hf.co/settings/tokens](https://huggingface.co/settings/tokens) → your token's **⋯** menu →
+**Generate S3 credentials**. You get an access key starting `HFAK…` and a secret **shown once**.
+Copy both somewhere before leaving the page.
 
-# CHECK before pushing. All seven, or the Space silently comes up on MinIO instead:
-# the entrypoint decides purely from APP_S3_ENDPOINT, and unset falls into the same
-# branch as localhost. Nothing errors - the build succeeds and the warehouse is just
-# in the wrong place.
-hf spaces variables ls <you>/big-data-ai
+```bash
+# ---- 5. settings, from a file rather than seven flags ------------------------
+# Write it first, read it back, then apply it. A typo is visible before it is live.
+cat > space.env <<'EOF'
+APP_S3_ENDPOINT=https://s3.hf.co
+APP_S3_BUCKET=<you>
+APP_S3_KEY_PREFIX=warehouse
+APP_S3_STS_ENABLED=false
+APP_S3_CREATE_BUCKET=false
+APP_S3_CLIENT_SIDE_SIGNING=true
+APP_WAREHOUSE_EXPLICIT_LOCATION=false
+EOF
 
-hf spaces secrets add <you>/big-data-ai \
-  -s HF_TOKEN=hf_xxx \
-  -s APP_S3_ACCESS_KEY=HFAK... \
-  -s APP_S3_SECRET_KEY=...
+cat space.env                    # check <you> is your username in BOTH places
+hf spaces variables add <you>/big-data-ai --env-file space.env
+hf spaces variables ls <you>/big-data-ai      # must list all seven
+```
 
-# NOTE: do NOT set APP_AI_BILL_TO. See "Billing" below.
+> **`APP_S3_BUCKET` is your username, not `warehouse`.** HF buckets are addressed
+> `namespace/bucket`, S3 refuses a `/` in a bucket name, and LakeKeeper refuses an endpoint with a
+> path — so the namespace becomes the S3 bucket and the bucket name moves to `APP_S3_KEY_PREFIX`.
+> It reads wrongly and is correct.
+>
+> **If `APP_S3_ENDPOINT` is missing, the Space silently comes up on an embedded MinIO.** The
+> entrypoint decides from that one variable, and unset falls into the same branch as localhost.
+> Nothing errors: the build succeeds, the app starts, the table is simply in the wrong place. That is
+> why step 5 ends with `variables ls`.
 
-# 6. Push. This is what triggers the build.
+```bash
+# ---- 6. the three secrets ---------------------------------------------------
+# One at a time, so a paste error names the secret it broke.
+hf spaces secrets add <you>/big-data-ai -s HF_TOKEN=hf_xxx
+hf spaces secrets add <you>/big-data-ai -s APP_S3_ACCESS_KEY=HFAK...
+hf spaces secrets add <you>/big-data-ai -s APP_S3_SECRET_KEY=...
+
+hf spaces secrets ls <you>/big-data-ai        # names only, never values
+```
+
+Do **not** set `APP_AI_BILL_TO` — see Billing, below.
+
+```bash
+# ---- 7. deploy ---------------------------------------------------------------
 git remote add hf https://huggingface.co/spaces/<you>/big-data-ai
 git push --force hf main
+```
 
-# 7. Watch it build, then wait for it to come up
-# the BUILD log - a broken Dockerfile or a bad token shows up here
+`--force` on the first push is expected: `hf repos create` gave the Space its own README commit, so
+your local `main` is unrelated history. The Space is seconds old — overwrite it.
+
+```bash
+# ---- 8. watch it, then prove it is bucket-backed -----------------------------
+# the BUILD log: a broken Dockerfile or a bad token shows up here
 hf spaces logs <you>/big-data-ai --build --follow
 hf spaces wait <you>/big-data-ai
 
-# the RUNTIME log - keep this open all day. Same command without --build.
-# The admin buttons always answer "... operation initiated" whether or not the
-# work succeeded; this is the only place the real outcome appears.
+# the RUNTIME log: the same command without --build. Keep this open all day —
+# the admin buttons always say "... operation initiated" whether or not the work
+# succeeded, and this is the only place the real outcome appears.
 hf spaces logs <you>/big-data-ai --follow
 
-# 8. CHECK it came up bucket-backed. This one line is the proof:
+# the one line that proves the warehouse is on your bucket and not on MinIO
 hf spaces logs <you>/big-data-ai | grep EMBEDDED_MINIO
 #   [init] EMBEDDED_MINIO=0; the warehouse lives in external storage (https://s3.hf.co)
-# No such line means MinIO, however healthy everything else looks.
 ```
 
 Then at `https://<you>-big-data-ai.hf.space/admin`: **Setup Environment** → **Download Data**
-(`2015`) → **Load Data** (`2015`). Then ask the home page a question.
+(`2015`) → **Load Data** (`2015`). Watch the runtime log for each. Then ask the home page a question.
 
 ### Billing — the one thing that differs between you and them
 
