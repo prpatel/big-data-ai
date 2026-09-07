@@ -689,6 +689,8 @@ each touches. This is dead time otherwise; use it.
 > do about it. Nothing here needs Java or Maven on your laptop — you edit files, push, and the Space
 > builds. Where a step needs the instructor, it says so.
 
+**Step-by-step build guide:** [https://claude.ai/code/artifact/250819f3-61a5-4ddb-a20d-8573e8be30ab](https://claude.ai/code/artifact/250819f3-61a5-4ddb-a20d-8573e8be30ab)
+
 Three things that were exercises in an earlier version are **already written for you**, because
 attacking a working guard teaches more in forty minutes than building one:
 
@@ -871,6 +873,8 @@ questions is fine; do not put fifty in the CSV and leave it looping.
 
 > **Work through this on your own.** It needs F1's eval set finished — at minimum three questions
 > with expected answers you derived yourself. Without that there is nothing to compare.
+
+**Step-by-step build guide:** [https://claude.ai/code/artifact/04543121-4442-407f-9c7f-1c228bc131d1](https://claude.ai/code/artifact/04543121-4442-407f-9c7f-1c228bc131d1)
 
 **There is no code to write.** The model is already a runtime setting: the **Model Picker** at the
 bottom of `/admin` changes it per request, so a bake-off costs no deploys at all. At roughly 90
@@ -1116,6 +1120,8 @@ the volume mount means the Job and the Space share storage with zero glue
 
 > **Work through this on your own.** You need a loaded table — H1 step 9. Everything here runs from
 > your laptop with `curl`, the `hf` CLI and a browser.
+
+**Step-by-step build guide:** [https://claude.ai/code/artifact/1bb55baa-e526-4420-acd1-a75c91a5541d](https://claude.ai/code/artifact/1bb55baa-e526-4420-acd1-a75c91a5541d)
 
 By the end you will have taken the table you built and turned it into a **public dataset on the Hub
 with a browsable viewer and a SQL console**, then used that to ask whether you needed Spark at all.
