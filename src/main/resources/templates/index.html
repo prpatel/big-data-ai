@@ -13,7 +13,17 @@
 <main class="container">
     <section>
         <h1>AI Real Estate Analyst: Iceberg/Spark/AI Demo</h1>
-        <a href="/admin">Admin</a>
+        <!-- Both /getCatalog and /showtable are @RestController endpoints that return a bare
+             page with no way back, so they open in a new tab rather than stranding the user. -->
+        <nav>
+            <ul>
+                <li><a href="/admin">Admin</a></li>
+                <li><a href="/getCatalog" target="_blank" rel="noopener"
+                       title="Ask LakeKeeper about the table: location, current snapshot id, and the full schema with column descriptions">Catalog</a></li>
+                <li><a href="/showtable" target="_blank" rel="noopener"
+                       title="First 10 rows, straight from Spark - useful for checking what the data actually looks like">Sample rows</a></li>
+            </ul>
+        </nav>
 
         <section>
             <input type="text"
