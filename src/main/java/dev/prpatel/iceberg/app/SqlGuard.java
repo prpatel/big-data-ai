@@ -7,6 +7,13 @@ import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Decides whether a piece of SQL is safe to run, and caps how much it can return.
  *
@@ -32,12 +39,64 @@ public class SqlGuard {
         }
     }
 
+    /**
+     * How a parsed-but-unresolved table reference renders, e.g.
+     * {@code 'UnresolvedRelation [lakekeeper, housing, staging_prices], [], false}.
+     *
+     * Read from the plan's own rendering rather than by walking the tree: getting at the
+     * identifiers in Java means converting a Scala Seq, and Scala interop is exactly what already
+     * throws NoClassDefFoundError in the catch below. The string form is produced by Spark from
+     * the same tree, and it cannot be spoofed from the SQL - a table literally named
+     * "UnresolvedRelation [x" will not parse.
+     */
+    private static final Pattern RELATION = Pattern.compile("UnresolvedRelation \\[([^\\]]+)\\]");
+
+    /**
+     * Names a statement defines for itself, which are not tables at all.
+     *
+     * A CTE renders its aliases at the top of the plan as {@code CTE [x, y]}, and every reference
+     * to one then appears as an ordinary {@code UnresolvedRelation [x]} lower down - identical in
+     * the tree to a real table. Without this, {@code WITH x AS (SELECT … FROM housing…) SELECT *
+     * FROM x} is refused for reading a table called "x" that was never anywhere but this query.
+     */
+    private static final Pattern CTE_NAMES = Pattern.compile("CTE \\[([^\\]]+)\\]");
+
     private final SparkSession spark;
     private final int maxRows;
+    private final String allowedNamespace;
 
-    public SqlGuard(SparkSession spark, @Value("${app.sql.max-rows:200}") int maxRows) {
+    public SqlGuard(SparkSession spark,
+                    @Value("${app.sql.max-rows:200}") int maxRows,
+                    @Value("${app.sql.allowed-namespace:lakekeeper.housing}") String allowedNamespace) {
         this.spark = spark;
         this.maxRows = maxRows;
+        this.allowedNamespace = allowedNamespace == null ? "" : allowedNamespace.trim();
+    }
+
+    /**
+     * Every table the statement actually reads, as dotted names - excluding names the statement
+     * defined for itself.
+     */
+    static List<String> tablesIn(LogicalPlan plan) {
+        String rendered = plan.toString();
+
+        Set<String> defined = new HashSet<>();
+        Matcher cte = CTE_NAMES.matcher(rendered);
+        while (cte.find()) {
+            for (String name : cte.group(1).split(",")) {
+                defined.add(name.trim());
+            }
+        }
+
+        List<String> found = new ArrayList<>();
+        Matcher m = RELATION.matcher(rendered);
+        while (m.find()) {
+            String name = m.group(1).replace(", ", ".").trim();
+            if (!defined.contains(name)) {
+                found.add(name);
+            }
+        }
+        return found;
     }
 
     public int maxRows() {
@@ -89,6 +148,21 @@ public class SqlGuard {
         if (plan.getClass().getSimpleName().startsWith("InsertInto")) {
             throw new RejectedException("Only read queries are allowed here. That statement writes.");
         }
+
+        // Reads are allowed, but not of anything. Without this, a SELECT can walk out of the
+        // namespace it was meant for - lakekeeper.system.snapshots, another team's table in the
+        // same catalog - and the guard above would wave it through, because reading is all it does.
+        if (!allowedNamespace.isEmpty()) {
+            for (String table : tablesIn(plan)) {
+                if (!table.startsWith(allowedNamespace + ".")) {
+                    throw new RejectedException(
+                            "Only tables in " + allowedNamespace + " can be queried here. "
+                                    + "That statement reads " + table + ".");
+                }
+            }
+        }
+        // A query touching no table at all - SELECT 1, SELECT current_date() - is deliberately
+        // allowed: there is no data for it to reach, so there is nothing to keep it out of.
 
         if (plan instanceof GlobalLimit) {
             return new CheckedSql(trimmed, false);
