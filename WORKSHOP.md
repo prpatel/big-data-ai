@@ -859,6 +859,42 @@ the entrypoint symlinks `/app/data` to `$DATA_ROOT/app`, so it lands at `app/exp
 bucket, while under compose it is `export/<name>`. It checks both. Re-running is safe — it skips the
 commit when nothing changed.
 
+### Which bucket, and why it is not the one you expect
+
+The Job mounts **`lakehouse`**, not `warehouse` — which reads backwards, so say it out loud:
+
+| Bucket | Holds | Written by |
+|--------|-------|------------|
+| `warehouse` | the live Iceberg table: `<uuid>/<uuid>/data/*.parquet` and `metadata/` | Spark, over `s3.hf.co` |
+| `lakehouse` (mounted at `/data`) | `app/export/<name>/` — plain Parquet plus a dataset card | the **Export to Parquet** button |
+
+**Why not publish the warehouse Parquet directly?** It is already Parquet, and copying it would skip
+a step. But the files in that bucket are not the table. Iceberg keeps superseded files alongside
+current ones until snapshots expire, so after a compaction, an overwrite or a `MERGE`, a raw copy
+**quietly republishes rows the table no longer contains**. Reading through the table makes Spark
+resolve the current snapshot's manifest, so the export is what the table actually is — and you get
+to pick the file count and give the files names a human can read.
+
+### So what is the warehouse for?
+
+This is the question the room will ask, and the answer is the point of the whole day.
+
+**The warehouse is the definitive copy.** It is the thing Spark, Trino, Flink, PyIceberg and DuckDB's
+Iceberg extension can all read *concurrently*, with snapshot isolation, time travel and safe
+concurrent writes. What makes that work is that the table is not "the files in the bucket" — it is
+**the catalog plus the manifests**, which say precisely which files belong to the current snapshot.
+That indirection is what lets one engine compact while another reads, and it is why a plain `ls` of
+the bucket tells you nothing.
+
+**The export is not a second source of truth, it is a serving copy** — a flat, self-describing
+snapshot for everything that does *not* speak Iceberg: the Hub's Dataset Viewer, `pd.read_parquet`,
+someone's notebook. It is stale the moment the table changes, and that is fine, because that is what
+publishing means.
+
+If an attendee objects that this is two copies of the same data — good. That is the right instinct,
+and the answer is that they are for different readers: one is a live table with transactions, the
+other is a file anyone can download.
+
 Then open the repo page: the **Dataset Viewer** and its SQL console are just *there*, for free, over
 the data they loaded twenty minutes ago.
 
