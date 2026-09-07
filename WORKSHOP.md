@@ -523,8 +523,14 @@ git remote add hf https://huggingface.co/spaces/<you>/big-data-ai
 git push --force hf main
 
 # 7. Watch it build, then wait for it to come up
+# the BUILD log - a broken Dockerfile or a bad token shows up here
 hf spaces logs <you>/big-data-ai --build --follow
 hf spaces wait <you>/big-data-ai
+
+# the RUNTIME log - keep this open all day. Same command without --build.
+# The admin buttons always answer "... operation initiated" whether or not the
+# work succeeded; this is the only place the real outcome appears.
+hf spaces logs <you>/big-data-ai --follow
 
 # 8. CHECK it came up bucket-backed. This one line is the proof:
 hf spaces logs <you>/big-data-ai | grep EMBEDDED_MINIO
