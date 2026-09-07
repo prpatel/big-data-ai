@@ -655,116 +655,183 @@ each touches. This is dead time otherwise; use it.
 
 ## F1 — Make the analyst trustworthy (40 min)
 
-The keystone lab. Three defects that were exercises in an earlier draft are now **already fixed in
-the code they clone**, because attacking a working guard teaches more in forty minutes than building
-one does — and because a room of twenty-five cannot all get a parser-based guard working before the
-break.
+> **Work through this on your own.** Every step says what to type, what you should see, and what to
+> do about it. Nothing here needs Java or Maven on your laptop — you edit files, push, and the Space
+> builds. Where a step needs the instructor, it says so.
 
-| Already built | Where | What it does |
-|---|---|---|
-| `SqlGuard` | `app/SqlGuard.java` | parses the statement, rejects anything that is not a single read, caps rows |
-| `SchemaStore` | `app/SchemaStore.java` | reads columns from the catalog with `DESCRIBE TABLE`, cached |
-| `SqlAnswer` | `app/SqlAnswer.java` | the model returns JSON — `sql`, `columns_used`, `assumptions` |
+Three things that were exercises in an earlier version are **already written for you**, because
+attacking a working guard teaches more in forty minutes than building one:
 
-Open `HomeController.runquery` and read it before anything else. **The interesting thing is that the
-SQL is a form field.** `generatedsql` is a POST parameter — the generated query lands in an editable
-textarea and whatever comes back gets executed. No prompt injection required.
-
-### Exercise 1 — break the guard (15 min)
-
-Type SQL straight into the box and press Run. Everything below has been tried; the point is to find
-out *why* each answer is what it is.
-
-| Attempt | What happens |
+| File | What it does |
 |---|---|
-| `DROP TABLE lakekeeper.housing.staging_prices` | rejected — *would modify the warehouse (DropTable)* |
-| `SELECT 1; DROP TABLE …` | rejected — fails to **parse**, so no second statement exists |
-| `INSERT INTO … SELECT` | rejected — *that statement writes* |
-| `MERGE INTO` / `DELETE FROM` | rejected |
-| `CALL lakekeeper.system.rollback_to_snapshot(…)` | rejected — but with `NoClassDefFoundError`, not a parse failure |
-| `WITH x AS (SELECT …) SELECT * FROM x` | **runs** — a CTE is still a read |
-| `SELECT/**/town FROM …` | **runs** — comments do not change what the parser sees |
+| `src/main/java/dev/prpatel/iceberg/app/SqlGuard.java` | parses the SQL, rejects anything that is not a single read, caps rows |
+| `src/main/java/dev/prpatel/iceberg/app/SchemaStore.java` | reads the column list from the catalog, so it cannot go stale |
+| `src/main/java/dev/prpatel/iceberg/app/SqlAnswer.java` | the shape the model must reply in: `sql`, `columns_used`, `assumptions` |
 
-**The debrief is the last three rows.** A regex guard would have rejected the CTE and been fooled by
-the comment; the parser gets both right, because it is asking Spark what the text *means* rather
-than what it looks like. And the `CALL` case is why `SqlGuard` catches `Throwable` rather than
-`Exception`: Iceberg's extended parser reaches for a Scala class that is not on the runtime
-classpath and throws an `Error`. For a guard, "could not confidently parse this" and "will not run
-it" are the same answer, whatever was thrown.
+---
 
-**The lesson, said out loud:** the model was never the vulnerability. An editable field that reaches
-`spark.sql()` is.
+### Part 1 — Break the guard (15 min)
 
-### Exercise 2 — where a row limit belongs (10 min)
-
-There is a **Rows to return** field next to the query box. Try 3, 7, then 500.
-
-| Where you could put a limit | What happens |
-|---|---|
-| In the system prompt | the model complies *sometimes* — this project has the git history to prove it |
-| At render time | `formatDataSet(df, n)` truncates, but `df.count()` already scanned everything |
-| `.limit(n)` in the plan | actually bounds the work — what `SqlGuard` does |
-
-500 comes back as 200: the per-query field is clamped by `app.sql.max-rows`. A user-supplied bound
-still needs a bound.
-
-### Exercise 3 — the deliverable: an eval set (20 min)
-
-Everyone in the room has shipped an LLM feature with no way to tell whether a prompt change helped.
-This is the smallest thing that fixes that, and F2 pays them back for it within the hour.
-
-**The file** — `src/test/resources/eval/questions.csv`:
-
-```csv
-id,question,check_type,expected
-q01,How many properties sold in Oxford in September 2015?,scalar,270
-q02,What was the most expensive sale in Camden in 2015?,scalar,4750000
-q03,Show me all flats sold in Bath,shape,property_type
-q04,Average price by town in Surrey,shape,GROUP BY
-q05,Which is the cheapest terraced house in Leeds?,scalar,42000
-```
-
-| `check_type` | Compares | Why it exists |
-|---|---|---|
-| `scalar` | the single value returned | unambiguous, no opinion about SQL style |
-| `shape` | a substring the generated SQL must contain | catches "right answer, wrong reason" |
-| `rowcount` | number of rows | for "show me all X" questions |
-
-**Where the expected answers come from — attendees always stall here.** They do not invent them.
-They *derive* them: run the query by hand in the box, read the answer, record it. Writing the ten
-questions **is** the exercise, because it forces them to decide what "correct" means. `q01` above is
-real — 270 is what the Oxford query returns against 2015.
-
-**The runner** — `src/test/java/.../EvalHarnessTest.java`, and this skeleton is enough:
+**1.1 — Look at the line the whole lab is about.** Open
+`src/main/java/dev/prpatel/iceberg/app/HomeController.java` and find **line 69**:
 
 ```java
-@ParameterizedTest
-@CsvFileSource(resources = "/eval/questions.csv", numLinesToSkip = 1)
-void evaluates(String id, String question, String checkType, String expected) {
-    long t0 = System.currentTimeMillis();
-    String sql = aiService.generateAnswer(question).sql();      // generated?
-    long latency = System.currentTimeMillis() - t0;
-
-    var plan = spark.sessionState().sqlParser().parsePlan(sql);  // parses?
-    Dataset<Row> result = spark.sql(sql);                        // executes?
-
-    switch (checkType) {                                          // right answer?
-        case "scalar"   -> assertThat(result.first().get(0).toString()).isEqualTo(expected);
-        case "rowcount" -> assertThat(result.count()).isEqualTo(Long.parseLong(expected));
-        case "shape"    -> assertThat(sql.toUpperCase()).contains(expected.toUpperCase());
-    }
-    System.out.printf("%s  %5d ms  %s%n", id, latency, checkType);
-}
+Dataset<Row> resultsDF = spark.sql(checked.sql());
 ```
 
-**The four gates are cumulative, and the order is the point:** *generated? → parses? → executes? →
-right answer?* A model scoring 10/10/10/3 has a completely different problem from one scoring
-10/4/4/4, and the lab only lands if they can see which.
+Now look **three lines up**, at line 66. Before this lab existed, line 69 read
+`spark.sql(generatedsql)` — and `generatedsql` is a **method parameter bound to a form field**. The
+generated SQL lands in an editable textarea on the page, and whatever is in that box when you press
+Run is what executes. **Nothing about that requires the model to misbehave.** You are about to prove
+it.
 
-**Two things to say before they start.** Ten questions is ten inference calls per run, on their own
-credits — tell them to start with five. And **run it twice on the same model**: the scores will
-differ. That non-determinism is the thing most of the room has never actually measured, and the
-debrief question is *"how many runs before you would believe a prompt change helped?"*
+**1.2 — Attack it.** Open your Space, press **Generate Query** once so the box has something in it,
+then **delete the SQL and type each of these in, pressing Run each time.** Write down what you get.
+
+| # | Type this into the SQL box | Expected |
+|---|---|---|
+| 1 | `DROP TABLE lakekeeper.housing.staging_prices` | rejected |
+| 2 | `SELECT 1; DROP TABLE lakekeeper.housing.staging_prices` | rejected |
+| 3 | `INSERT INTO lakekeeper.housing.staging_prices SELECT * FROM lakekeeper.housing.staging_prices` | rejected |
+| 4 | `CALL lakekeeper.system.rollback_to_snapshot('housing.staging_prices',1)` | rejected |
+| 5 | `WITH x AS (SELECT town FROM lakekeeper.housing.staging_prices) SELECT * FROM x` | **runs** |
+| 6 | `SELECT/**/town FROM lakekeeper.housing.staging_prices` | **runs** |
+
+Read the rejection messages — they are not all the same, and the difference is the point.
+
+**1.3 — Find out why, in the code.** Open `SqlGuard.java` and match each result to the line that
+produced it:
+
+| Your attempt | Line | What happened |
+|---|---|---|
+| 1, 3 | **83**, **89** | the SQL parsed fine, and the guard rejected what it *meant* — a `Command`, or an `InsertInto` |
+| 2 | **72** | never parsed at all: `SELECT 1; DROP …` is two statements, and Spark's parser refuses it. There is no "second statement" to sneak through |
+| 4 | **72** | also rejected — but read the message. It is a `NoClassDefFoundError`, not a parse error |
+| 5, 6 | — | nothing rejected them, because they are reads |
+
+**1.4 — Answer these three questions before moving on.** Write your answers down; they are the
+lab, not the typing.
+
+1. **Attempt 6 is the comment trick.** If the guard were `if (sql.toUpperCase().startsWith("SELECT"))`,
+   would attempt 6 pass? Would attempt 2? Now explain, in one sentence, why parsing beats pattern
+   matching. *(Hint: one of them is a read that a regex would reject, and one is a write that a
+   naive regex would accept.)*
+2. **Attempt 4 threw an `Error`, not an `Exception`.** Look at line 72: the `catch` is on
+   `Throwable`. If it caught `Exception` instead, what would the user see when they run a `CALL`?
+   Is that better or worse than a rejection?
+3. **Attempt 5 ran.** Is that a bug? Argue both sides in two sentences.
+
+**1.5 — Now change something.** The guard allows any read of any table. Make it only allow reads of
+the `housing` namespace.
+
+- Open `SqlGuard.java`, find `check(String sql, int rows)` at **line 62**
+- After the `InsertInto` check at line 89, add your own check. You have `plan`, a parsed tree —
+  `plan.toString()` contains the table names it touches, which is enough for this
+- Throw `new RejectedException("…")` with a message that tells the user what they did wrong
+- Commit, `git push hf main`, wait for the build, then try
+  `SELECT * FROM lakekeeper.system.snapshots` and confirm it is now refused
+
+**If you finish early:** your check probably rejects `SELECT 1` too, which touches no table at all.
+Decide whether that is correct, and make it deliberate either way.
+
+---
+
+### Part 2 — Where a row limit belongs (10 min)
+
+**2.1 — See the cap work.** In the **Rows to return** box next to the query, try `3`, then `7`, then
+`500`, running `SELECT town FROM lakekeeper.housing.staging_prices` each time. Count the rows you get
+back.
+
+You get 3, then 7, then **200** — not 500.
+
+**2.2 — Find out why.** `SqlGuard.java`, **line 63**:
+
+```java
+int cap = rows > 0 ? Math.min(rows, maxRows) : maxRows;
+```
+
+`maxRows` comes from `app.sql.max-rows` in `src/main/resources/application.properties` (**line 74**),
+which is `200`. **A user-supplied bound still needs a bound** — otherwise the box on the page is just
+a slower way to ask for everything.
+
+**2.3 — The question worth arguing about.** There are three places this limit could have gone. Only
+one of them actually bounds the work:
+
+| Where | Why it is wrong, or right |
+|---|---|
+| In the system prompt — *"always add a LIMIT"* | the model complies **sometimes**. Check this repo's git log for `Limit query results to 10 rows in system prompt` and the revert that followed |
+| At render time — `formatDataSet(df, 200)` | `HomeController` calls `df.count()` **before** formatting. The count already scanned every row. You truncated the *display*, not the work |
+| `.limit(n)` in the plan — what `SqlGuard` does | Spark plans for `n` rows and stops |
+
+**2.4 — Prove it.** Set **Rows to return** to `1` and run
+`SELECT * FROM lakekeeper.housing.staging_prices`. Now open the runtime log
+(`hf spaces logs <you>/big-data-ai --follow`) and look at the query Spark actually ran — the guard
+rewrote it as `SELECT * FROM (…) LIMIT 1`. That rewrite is at `SqlGuard.java` **line 97**.
+
+**Optional change:** make the app log how long each query took, so Part 3's latency column has a
+second source. `HomeController.runquery` already has the structure for it — one `System.currentTimeMillis()`
+either side of line 69.
+
+---
+
+### Part 3 — Build an eval set (20 min)
+
+This is the deliverable. Everyone has shipped an LLM feature with no way to tell whether a prompt
+change helped; this is the smallest thing that fixes that, and F2 uses it within the hour.
+
+**3.1 — Run it once, empty, to see the shape.** Two files already exist:
+
+```bash
+cat scripts/questions.csv       # five questions, four with no expected answer yet
+./scripts/eval.sh <you>/big-data-ai
+```
+
+You get a table like this — and **most of the `correct` column says `--`, meaning "not scored"**:
+
+```
+id    generated ran     correct   ms
+----------------------------------------------------------
+q01   yes       yes     no        2000
+q02   yes       yes     --        1000
+```
+
+**3.2 — Fill in the expected answers. This is the actual exercise, and it is where people stall.**
+Do **not** invent the numbers. Derive them:
+
+1. Take the question from the CSV — say *"What is the highest price paid in Camden in 2015?"*
+2. Paste it into the app, press **Generate Query**, then **Run Query**
+3. **Read the answer, and satisfy yourself it is right.** Look at the SQL it generated. Did it filter
+   on the year the way you meant? Is `Camden` in `town` or in `district`? This is the moment you
+   discover the question was ambiguous
+4. Put that value in the `expected` column of `scripts/questions.csv`
+5. Re-run `./scripts/eval.sh` — that row should now say `yes`
+
+**Deciding what "correct" means *is* the lab.** If you cannot write down the expected answer, the
+question is not answerable, and no model was ever going to get it right.
+
+**3.3 — Write five more.** Aim for a spread, because a set where everything passes teaches nothing:
+
+- two you are confident the model gets right (a simple count, a simple max)
+- two that are ambiguous on purpose — *"recent sales"*, *"expensive houses"* — and see what it assumes
+- one that needs two conditions at once — a town **and** a property type **and** a year
+
+**3.4 — Read the result properly.** The three gates are cumulative, and the shape tells you where the
+problem is:
+
+| Scores | What it means |
+|---|---|
+| `10 / 10 / 3` | the SQL is valid and runs, but answers the wrong question. **A prompt problem** |
+| `10 / 4 / 4` | the SQL is often invalid or gets rejected. **A model-capability problem** |
+| `4 / 4 / 4` | it frequently returns nothing usable. Check the runtime log — probably not returning JSON |
+
+**3.5 — Run it twice on the same model, changing nothing.** The scores will differ. That
+non-determinism is the thing most people have never actually measured on their own feature.
+
+**Then answer this:** how many runs would you need before you would believe a prompt change had
+helped? Keep your answer — F2 is about to make you use it.
+
+**Watch the cost.** Each run is one inference call per question, billed to your credits. Five
+questions is fine; do not put fifty in the CSV and leave it looping.
 
 **Useful anywhere** ✅ entirely portable · **Better on HF** ✅ the model swap in F2 is one string
 
