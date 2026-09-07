@@ -495,7 +495,8 @@ teaches is now the starting state.
 
 ## H1 — Ship the thing (30 min)
 
-**Goal** Everyone has a URL that answers a question in English, backed by their own data.
+**Goal** Everyone has a URL that answers a question in English, backed by their own data, with that
+data stored on the Hub.
 
 Attendees deploy by **pushing to the Space's git remote**, which is also the dev loop they will
 use for the rest of the day: edit locally, commit, push, watch it build.
@@ -507,24 +508,60 @@ git clone <workshop-repo-url> big-data-ai && cd big-data-ai
 # 2. Your own Space — Docker SDK, private
 hf repos create <you>/big-data-ai --type space --sdk docker --private
 
-# 3. Storage for it — an HF bucket mounted where the app expects /data
-hf buckets create <you>/lakehouse --private
-hf spaces volumes set <you>/big-data-ai --volume hf://buckets/<you>/lakehouse:/data
+# 3. TWO buckets. They are not the same kind of thing — see the note below.
+hf buckets create <you>/lakehouse --private     # files: CSVs + the catalog dump
+hf buckets create <you>/warehouse --private     # Iceberg data + metadata
 
-# 4. Credentials for the LLM call
-hf spaces secrets add <you>/big-data-ai --secrets HF_TOKEN=hf_xxx
+# Only the first is mounted. The second is reached over the S3 API and must NOT be mounted.
+hf spaces volumes set <you>/big-data-ai -v hf://buckets/<you>/lakehouse:/data
 
-# 5. Push. This is what triggers the build.
+# 4. S3 credentials for the warehouse bucket — the one step with no CLI.
+#    hf.co/settings/tokens -> your token's ... menu -> Generate S3 credentials
+#    You get an access key starting HFAK... and a secret shown exactly once.
+
+# 5. Tell the app where the warehouse lives, and how to sign for it
+hf spaces variables add <you>/big-data-ai \
+  -e APP_S3_ENDPOINT=https://s3.hf.co \
+  -e APP_S3_BUCKET=<you> \
+  -e APP_S3_KEY_PREFIX=warehouse \
+  -e APP_S3_STS_ENABLED=false \
+  -e APP_S3_CREATE_BUCKET=false \
+  -e APP_S3_CLIENT_SIDE_SIGNING=true \
+  -e APP_WAREHOUSE_EXPLICIT_LOCATION=false
+
+hf spaces secrets add <you>/big-data-ai \
+  -s HF_TOKEN=hf_xxx \
+  -s APP_S3_ACCESS_KEY=HFAK... \
+  -s APP_S3_SECRET_KEY=...
+
+# 6. Push. This is what triggers the build.
 hf auth login --add-to-git-credential          # so git can authenticate over HTTPS
 git remote add hf https://huggingface.co/spaces/<you>/big-data-ai
 git push --force hf main
 
-# 6. Watch it build, then wait for it to come up
+# 7. Watch it build, then wait for it to come up
 hf spaces logs <you>/big-data-ai --build --follow
 hf spaces wait <you>/big-data-ai
 ```
 
-Three things to say out loud while they run this:
+### The two buckets, because this is the confusing part
+
+| | `<you>/lakehouse` | `<you>/warehouse` |
+|---|---|---|
+| Reached how | **mounted** as a volume at `/data` | **S3 API** over `s3.hf.co` |
+| Holds | downloaded CSVs, `lakekeeper-catalog.sql` | Iceberg `data/` and `metadata/` |
+| Why | Postgres's dump and the CSVs are ordinary files that must outlive the container | Spark and LakeKeeper speak S3 to it; a mount would be a second path nothing reads |
+
+**Do not mount the warehouse bucket.** The app never resolves a filesystem path to it. It asks
+LakeKeeper where the table is, and LakeKeeper answers from the storage profile that **Setup
+Environment** registers — endpoint, bucket, key-prefix, credentials.
+
+**`APP_S3_BUCKET` is your namespace, not your bucket.** HF buckets are addressed
+`namespace/bucket`, S3 will not take a `/` inside a bucket name, and LakeKeeper rejects an endpoint
+that carries a path. So the namespace becomes the S3 bucket and the real bucket name slides down
+into `APP_S3_KEY_PREFIX`. Get these two the wrong way round and the error will not tell you.
+
+### Three things to say out loud while they run this
 
 - **`--force` on the first push is expected, not a mistake.** `hf repos create` initialises the Space
   with its own README commit, so your local `main` has unrelated history. The Space is seconds old
@@ -544,16 +581,32 @@ Then, at `https://<you>-big-data-ai.hf.space/admin`: **Setup Environment** → *
 (`2015`) → **Load Data** (`2015`). Then ask the home page a question.
 
 **What they learn** Docker Spaces are just a Dockerfile and a port; secrets vs. variables; a bucket
-volume is how a Space gets state that survives a restart; the Hub page is an iframe wrapper, so
-`/admin` lives on the `hf.space` subdomain.
+volume is how a Space gets state that survives a restart; that a catalog stores *where* a table is,
+which is why the same query works against MinIO locally and the Hub in production; the Hub page is
+an iframe wrapper, so `/admin` lives on the `hf.space` subdomain.
 
 **Talking point while builds run** Walk through `SETUP_FLOW.md` — the three admin buttons and what
 each touches. This is dead time otherwise; use it.
 
-**Trap to pre-empt** The admin buttons always answer *"… operation initiated"* whether or not the
-work succeeded. Teach `hf spaces logs --follow` in the first ten minutes; they'll need it all day.
+### Traps to pre-empt — all four have actually happened
 
----
+- **The admin buttons always answer *"… operation initiated"*** whether or not the work succeeded.
+  `AdminController` adds that message unconditionally, before the service call returns. Teach
+  `hf spaces logs <space> --follow` in the first ten minutes; they will need it all day.
+- **Setup can fail on the warehouse step alone**, having already created the bucket reference and
+  bootstrapped the project. The log line to look for is `✅ Warehouse created successfully`. A
+  failure looks like:
+  `400 {"error":{"message":"IO Operation failed during Validation: ... Unknown S3 error during write:
+  unhandled error (InternalError) at s3://<you>/warehouse/.../metadata/test"}}`
+- **That error is about credentials, not the gateway.** LakeKeeper validates a new warehouse by
+  writing a probe object with *its own* S3 client, so `APP_S3_CLIENT_SIDE_SIGNING` — which only
+  affects Spark — cannot help. We hit this with a freshly generated key and fixed it by swapping in
+  a known-working one; we did not isolate whether the cause was propagation delay or token scope. If
+  it happens, re-generate the credentials, restart, and click Setup again — it is idempotent, and
+  re-running only retries the step that failed.
+- **A private Space needs a session.** The browser is fine once they are logged in to HF, but
+  anything scripted against `https://<you>-big-data-ai.hf.space` needs
+  `-H "Authorization: Bearer $(hf auth token)"`, or it returns a 404 that looks like a broken deploy.
 
 ## F1 — Make the analyst trustworthy (40 min)
 

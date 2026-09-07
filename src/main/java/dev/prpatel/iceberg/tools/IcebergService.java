@@ -199,10 +199,38 @@ public class IcebergService {
                 continue;
             }
 
+            // Spark reads a CSV as parallel splits and holds a file handle open for the whole of
+            // each task - including the slow part, where the task is writing Parquet out to object
+            // storage. On a Space the download directory is a mounted bucket, and that mount drops
+            // an idle read handle after about three minutes, which surfaces as
+            // "FSError: java.io.IOException: Input/output error" and fails the whole job. It only
+            // bites when the write is remote; against a local MinIO the tasks finish long before
+            // the timeout.
+            //
+            // So take the one access pattern object storage is reliably good at - a sequential
+            // whole-file read - and copy the CSV to the container's own disk first. Spark then does
+            // its seeking against local disk, and nothing holds a handle on the mount.
+            Path readFrom = csvFile.toPath();
+            Path staged = null;
+            try {
+                staged = Files.createTempFile("pp-", ".csv");
+                long copyStarted = System.currentTimeMillis();
+                Files.copy(readFrom, staged, StandardCopyOption.REPLACE_EXISTING);
+                System.out.println("Staged " + csvPath + " to " + staged + " ("
+                        + (csvFile.length() / (1024 * 1024)) + " MB in "
+                        + (System.currentTimeMillis() - copyStarted) + " ms)");
+                readFrom = staged;
+            } catch (IOException e) {
+                // Not fatal: on a normal filesystem the copy buys nothing anyway, so fall back to
+                // reading in place rather than refusing to load.
+                System.err.println("Could not stage " + csvPath + " locally, reading it in place: " + e);
+                staged = null;
+            }
+
             Dataset<Row> df = spark.read()
                     .option("header", "false")
                     .schema(csvSchema)
-                    .csv(csvPath);
+                    .csv(readFrom.toString());
 
             // Transform: Parse date string to DateType
             Dataset<Row> transformedDf = df.withColumn("date_of_transfer",
@@ -222,6 +250,14 @@ public class IcebergService {
             } catch (Exception e) {
                 System.err.println("Error writing to table from " + csvPath + ": " + e.getMessage());
                 e.printStackTrace();
+            } finally {
+                if (staged != null) {
+                    try {
+                        Files.deleteIfExists(staged);
+                    } catch (IOException e) {
+                        System.err.println("Could not remove the staged copy " + staged + ": " + e);
+                    }
+                }
             }
         }
     }
