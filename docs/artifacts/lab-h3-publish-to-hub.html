@@ -1,0 +1,386 @@
+<title>H3 · Publish to the Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+
+<style>
+  :root {
+    --ground:#FAF9FC; --surface:#FFFFFF; --sunk:#F1EFF5; --term:#F4F2F8;
+    --ink:#17141F; --muted:#5A5370; --faint:#837B99; --rule:#E3DFEB;
+    --accent:#C96A05; --accent-soft:#FBEEDC;
+    --code:#5646CE; --code-soft:#EDEAFB;
+    --pass:#1F6B4A; --pass-soft:#DFF0E7;
+    --fail:#A3341F; --fail-soft:#F8E4DF;
+    --shadow:0 1px 2px rgba(23,20,31,.05), 0 10px 30px -22px rgba(23,20,31,.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --term:#0A0810;
+      --ink:#EDEAF4; --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+      --accent:#FFB44D; --accent-soft:#2B1E0E;
+      --code:#A594FF; --code-soft:#1D1836;
+      --pass:#5FC492; --pass-soft:#10241B;
+      --fail:#F08A6E; --fail-soft:#2B1310;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --term:#0A0810;
+    --ink:#EDEAF4; --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+    --accent:#FFB44D; --accent-soft:#2B1E0E;
+    --code:#A594FF; --code-soft:#1D1836;
+    --pass:#5FC492; --pass-soft:#10241B;
+    --fail:#F08A6E; --fail-soft:#2B1310;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); margin: 0;
+    font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 58rem; margin: 0 auto; padding: clamp(2rem,5vw,3.5rem) clamp(1rem,4vw,2.5rem) 6rem; }
+
+  .masthead { border-bottom: 3px double var(--rule); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 .8rem;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(2rem,5vw,3rem); line-height: 1.02; letter-spacing: -.025em;
+    margin: 0 0 .8rem; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.08rem; color: var(--muted); max-width: 40rem; margin: 0; }
+
+  p { margin: 0 0 1rem; max-width: 44rem; }
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--code); outline-offset: 3px; }
+
+  code {
+    font-family: "JetBrains Mono", monospace; font-size: .82em;
+    background: var(--code-soft); color: var(--code);
+    border-radius: 3px; padding: .08em .32em;
+  }
+  pre {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; line-height: 1.65;
+    background: var(--term); border: 1px solid var(--rule); border-left: 3px solid var(--code);
+    border-radius: 4px; padding: .85rem 1rem; overflow-x: auto; margin: 0 0 1rem;
+    color: var(--ink);
+  }
+  pre code { background: none; color: inherit; padding: 0; font-size: 1em; }
+  pre .c { color: var(--faint); }
+
+  /* part headings */
+  .part {
+    display: flex; align-items: baseline; gap: .9rem; flex-wrap: wrap;
+    margin: 3.5rem 0 .4rem; border-top: 2px solid var(--ink); padding-top: 1rem;
+  }
+  .part .n {
+    font-family: "JetBrains Mono", monospace; font-size: .7rem; font-weight: 700;
+    letter-spacing: .18em; color: var(--accent); text-transform: uppercase;
+  }
+  .part h2 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.55rem;
+    letter-spacing: -.018em; margin: 0; text-wrap: balance;
+  }
+  .part .mins {
+    font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--faint);
+    margin-left: auto;
+  }
+  .part + p { margin-top: .9rem; }
+
+  /* a numbered step */
+  .step { display: grid; grid-template-columns: 3.2rem 1fr; gap: 0 1rem; margin: 1.8rem 0; }
+  .step > .sn {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; font-weight: 700;
+    color: var(--accent); padding-top: .18rem; letter-spacing: .04em;
+  }
+  .step > .sb > :last-child { margin-bottom: 0; }
+  .step h3 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.08rem;
+    margin: 0 0 .5rem; letter-spacing: -.008em; line-height: 1.3;
+  }
+  @media (max-width: 34rem) { .step { grid-template-columns: 1fr; gap: .3rem; } }
+
+  /* boxes */
+  .box { border-radius: 0 5px 5px 0; padding: .85rem 1.05rem; margin: 1rem 0; max-width: 44rem; }
+  .box p:last-child { margin-bottom: 0; }
+  .box .l {
+    font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .14em;
+    text-transform: uppercase; display: block; margin-bottom: .4rem; font-weight: 700;
+  }
+  .task   { background: var(--accent-soft); border-left: 3px solid var(--accent); }
+  .task .l   { color: var(--accent); }
+  .think  { background: var(--code-soft); border-left: 3px solid var(--code); }
+  .think .l  { color: var(--code); }
+  .warn   { background: var(--fail-soft); border-left: 3px solid var(--fail); }
+  .warn .l   { color: var(--fail); }
+
+  .think ol { margin: .3rem 0 0; padding-left: 1.15rem; }
+  .think li { margin-bottom: .55rem; }
+  .think li:last-child { margin-bottom: 0; }
+  .task ul { margin: .3rem 0 0; padding-left: 1.15rem; }
+  .task li { margin-bottom: .35rem; }
+
+  /* tables */
+  .tw { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; min-width: 22rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: "JetBrains Mono", monospace; font-size: .61rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); font-weight: 500;
+    border-bottom: 2px solid var(--ink); white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td code { font-size: .78rem; }
+  td.n { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--faint); }
+
+  .v {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; font-weight: 700;
+    letter-spacing: .08em; padding: .15rem .45rem; border-radius: 3px; white-space: nowrap;
+  }
+  .v-run  { background: var(--fail-soft); color: var(--fail); border: 1px solid var(--fail); }
+  .v-stop { background: var(--pass-soft); color: var(--pass); border: 1px solid var(--pass); }
+  .v-none { background: var(--sunk); color: var(--faint); border: 1px solid var(--rule); }
+
+  .file {
+    font-family: "JetBrains Mono", monospace; font-size: .74rem;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 4px;
+    padding: .5rem .7rem; margin: 0 0 .8rem; display: block; color: var(--muted);
+    overflow-x: auto; white-space: nowrap;
+  }
+  .file b { color: var(--ink); font-weight: 700; }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">Lab H3 · 25 minutes · work through it on your own</p>
+  <h1>Publish it, then check whether you needed Spark</h1>
+  <p class="standfirst">Turn the table you built into a public dataset with a browsable viewer and a
+  SQL console — then use it to ask an uncomfortable question about the engine that produced it.</p>
+</header>
+
+<div class="box warn">
+  <span class="l">Before you start</span>
+  <p>You need a loaded table — H1 step 9. Everything here runs from your laptop with
+  <code>curl</code>, the <code>hf</code> CLI and a browser.</p>
+</div>
+
+<div class="part"><span class="n">Context</span><h2>The Hugging Face pieces</h2><span class="mins">—</span></div>
+
+<p>You have already used the first three. This lab adds the last three.</p>
+
+<div class="tw"><table>
+  <thead><tr><th>Service</th><th>What it is</th><th>Where you meet it</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Spaces</strong></td><td>a container the Hub runs for you, one published port</td><td>your app</td></tr>
+    <tr><td><strong>Storage Buckets</strong></td><td>S3-compatible object storage, reachable as a mount <em>or</em> over <code>s3.hf.co</code></td><td><code>lakehouse</code>, <code>warehouse</code></td></tr>
+    <tr><td><strong>Inference Providers</strong></td><td>one token, one base URL, ~20 model providers behind it</td><td>F1 and F2</td></tr>
+    <tr><td><strong>Jobs</strong></td><td>run a script on HF hardware; mount the same buckets, no local Python</td><td>Part 2</td></tr>
+    <tr><td><strong>Datasets</strong></td><td>a git repo built for data, large files handled for you</td><td>Part 2</td></tr>
+    <tr><td><strong>Dataset Viewer</strong></td><td>automatic browsable table + SQL console over published Parquet</td><td>Part 3</td></tr>
+  </tbody>
+</table></div>
+
+<div class="part"><span class="n">Part 1</span><h2>Export the table</h2><span class="mins">5 min</span></div>
+
+<div class="step">
+  <div class="sn">1.1</div>
+  <div class="sb">
+    <h3>Click it</h3>
+    <p><code>/admin</code> → <strong>Export to Parquet</strong>. Watch the runtime log.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">1.2</div>
+  <div class="sb">
+    <h3>Understand what it did — it is not what people expect</h3>
+    <p>It ran a <strong>Spark read of the current snapshot and wrote fresh Parquet</strong>. It did
+    <em>not</em> copy the files out of the warehouse bucket.</p>
+    <div class="box think">
+      <span class="l">Why not just copy?</span>
+      <p>The warehouse already holds Parquet, so copying would be fewer steps. But those files are
+      not the table. Iceberg keeps superseded files alongside current ones until snapshots expire, so
+      after a compaction or an overwrite <strong>a raw copy silently republishes rows the table no
+      longer contains</strong>. Reading through the table resolves the current snapshot's manifest.</p>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">1.3</div>
+  <div class="sb">
+    <h3>Look at what it produced</h3>
+    <span class="file">in your <b>lakehouse</b> bucket, under app/export/uk-price-paid/</span>
+<pre><code>README.md                     <span class="c">&lt;- dataset card, with the frontmatter the Viewer reads</span>
+data/part-00000-….parquet     <span class="c">&lt;- the Parquet, in a data/ subdirectory</span>
+data/part-00001-….parquet</code></pre>
+    <p>The <code>data/</code> subdirectory is deliberate: <code>pandas</code> and <code>pyarrow</code>
+    refuse a directory that mixes Parquet with anything else, so the card cannot sit beside them.</p>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 2</span><h2>Publish it with a Job</h2><span class="mins">10 min</span></div>
+
+<div class="step">
+  <div class="sn">2.1</div>
+  <div class="sb">
+    <h3>What a Job is</h3>
+    <p>A container Hugging Face runs on its own hardware, <strong>once</strong>, then throws away. You
+    give it a script, a hardware size, and any volumes to mount. It is <em>not</em> a Space: nothing
+    is served, there is no URL — it runs to completion and exits.</p>
+    <div class="box think">
+      <span class="l">Why that matters here, concretely</span>
+      <p>The export is tens of megabytes, and there are twenty-five of you. A Job mounts the same
+      bucket the Space writes to and moves the bytes <strong>inside</strong> Hugging Face — nothing
+      crosses the venue wifi.</p>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">2.2</div>
+  <div class="sb">
+    <h3>Run it</h3>
+<pre><code>hf jobs uv run scripts/publish-dataset.py \
+  -v hf://buckets/&lt;you&gt;/lakehouse:/mnt/lakehouse \
+  -e DATASET_REPO=&lt;you&gt;/uk-price-paid \
+  -e PRIVATE=0 \
+  -s HF_TOKEN \
+  --flavor cpu-basic</code></pre>
+    <div class="tw"><table>
+      <thead><tr><th>Flag</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>uv run &lt;script&gt;</code></td><td>uploads your local script and runs it with <code>uv</code>, installing the dependencies declared in its header</td></tr>
+        <tr><td><code>-v hf://buckets/…</code></td><td>mounts your bucket into the Job at that path</td></tr>
+        <tr><td><code>-e KEY=value</code></td><td>an environment variable the script reads</td></tr>
+        <tr><td><code>-s HF_TOKEN</code></td><td>passes your token as a <strong>secret</strong> — not printed, not in the Job's logs</td></tr>
+        <tr><td><code>--flavor cpu-basic</code></td><td>the smallest hardware. This is a file copy; it needs nothing more</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Not <code>/data</code>.</strong> Jobs reserves that path for its own artifacts when
+    running a local script, and refuses the mount outright.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">2.3</div>
+  <div class="sb">
+    <h3>Why PRIVATE=0 — think before you run it</h3>
+    <p>The script defaults to a <strong>private</strong> dataset. Public is what you want here, for a
+    reason worth knowing:</p>
+    <div class="box warn">
+      <span class="l">The Viewer does not work on private datasets for free accounts</span>
+      <p>You get <em>"Not supported: … Private datasets are only supported for PRO users and
+      Enterprise Hub organizations."</em> Publish private and <strong>Part 3 simply will not
+      happen.</strong></p>
+    </div>
+    <p>Public is also right for <em>this</em> data: UK Land Registry Price Paid, already public under
+    the Open Government Licence, and the card the exporter wrote says so. <strong>That would not be
+    true of your own company's data</strong> — which is exactly the judgement this flag is asking you
+    to make.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">2.4</div>
+  <div class="sb">
+    <h3>Re-running is safe</h3>
+    <p>The script skips the commit when nothing changed, so a second run reports <em>"No files have
+    been modified since last commit"</em> rather than making an empty one.</p>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 3</span><h2>The Dataset Viewer</h2><span class="mins">5 min</span></div>
+
+<div class="step">
+  <div class="sn">3.1</div>
+  <div class="sb">
+    <h3>Open it</h3>
+<pre><code>https://huggingface.co/datasets/&lt;you&gt;/uk-price-paid</code></pre>
+    <p>Give it a minute after the Job finishes — the Hub indexes the Parquet in the background.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">3.2</div>
+  <div class="sb">
+    <h3>What you get, without configuring anything</h3>
+    <div class="tw"><table>
+      <tbody>
+        <tr><td><strong>Browsable table</strong></td><td>paginated, sortable, column types inferred</td></tr>
+        <tr><td><strong>Column statistics</strong></td><td>distributions, null counts, min/max</td></tr>
+        <tr><td><strong>SQL console</strong></td><td>DuckDB, running in your browser, against the Parquet</td></tr>
+        <tr><td><strong>API endpoint</strong></td><td>auto-generated, for rows and search</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">3.3</div>
+  <div class="sb">
+    <h3>Why it works — there is no magic</h3>
+    <p>The <code>README.md</code> the exporter wrote carries this frontmatter:</p>
+<pre><code>configs:
+  - config_name: default
+    data_files: "data/*.parquet"</code></pre>
+    <p>That is the whole contract. The Viewer reads it, finds the Parquet, indexes it.
+    <strong>Publish Parquet without a card and you get nothing.</strong></p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">3.4</div>
+  <div class="sb">
+    <h3>Use the SQL console</h3>
+<pre><code>SELECT town, COUNT(*) AS sales, ROUND(AVG(price)) AS avg_price
+FROM train
+GROUP BY town
+ORDER BY sales DESC
+LIMIT 20;</code></pre>
+    <p>No install, no credentials, no cluster.</p>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 4</span><h2>The honest experiment</h2><span class="mins">5 min</span></div>
+
+<div class="step">
+  <div class="sn">4.1</div>
+  <div class="sb">
+    <h3>Same question, three engines — time each</h3>
+    <div class="tw"><table>
+      <thead><tr><th>Engine</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td>Spark + Iceberg</td><td>your app's <strong>Run Query</strong></td></tr>
+        <tr><td>DuckDB in the browser</td><td>the Viewer's SQL console</td></tr>
+        <tr><td>DuckDB locally</td><td><code>hf datasets sql "SELECT … FROM 'hf://datasets/&lt;you&gt;/uk-price-paid/data/*.parquet'"</code></td></tr>
+      </tbody>
+    </table></div>
+    <p><code>hf datasets sql</code> needs DuckDB installed (<code>brew install duckdb</code>, or
+    <code>pip install duckdb</code>). Without it, the browser console makes the point just as well.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">4.2</div>
+  <div class="sb">
+    <h3>The crossover is the lesson</h3>
+    <p>For one year on one machine, <strong>DuckDB will very likely win</strong> — and saying so out
+    loud buys enormous credibility, because the room already suspects it. Spark's case is the
+    eleven-year load, the multi-node future, and Iceberg's snapshots and schema evolution. It is not
+    the single-node scan.</p>
+    <div class="box think">
+      <span class="l">Answer in writing</span>
+      <p>At what data size would your answer flip — and what would you measure to find out?</p>
+    </div>
+  </div>
+</div>
+
+</div>

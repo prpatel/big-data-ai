@@ -1,0 +1,478 @@
+<title>F1 · Trustworthy Analyst</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+
+<style>
+  :root {
+    --ground:#FAF9FC; --surface:#FFFFFF; --sunk:#F1EFF5; --term:#F4F2F8;
+    --ink:#17141F; --muted:#5A5370; --faint:#837B99; --rule:#E3DFEB;
+    --accent:#C96A05; --accent-soft:#FBEEDC;
+    --code:#5646CE; --code-soft:#EDEAFB;
+    --pass:#1F6B4A; --pass-soft:#DFF0E7;
+    --fail:#A3341F; --fail-soft:#F8E4DF;
+    --shadow:0 1px 2px rgba(23,20,31,.05), 0 10px 30px -22px rgba(23,20,31,.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --term:#0A0810;
+      --ink:#EDEAF4; --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+      --accent:#FFB44D; --accent-soft:#2B1E0E;
+      --code:#A594FF; --code-soft:#1D1836;
+      --pass:#5FC492; --pass-soft:#10241B;
+      --fail:#F08A6E; --fail-soft:#2B1310;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --term:#0A0810;
+    --ink:#EDEAF4; --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+    --accent:#FFB44D; --accent-soft:#2B1E0E;
+    --code:#A594FF; --code-soft:#1D1836;
+    --pass:#5FC492; --pass-soft:#10241B;
+    --fail:#F08A6E; --fail-soft:#2B1310;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); margin: 0;
+    font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 58rem; margin: 0 auto; padding: clamp(2rem,5vw,3.5rem) clamp(1rem,4vw,2.5rem) 6rem; }
+
+  .masthead { border-bottom: 3px double var(--rule); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 .8rem;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(2rem,5vw,3rem); line-height: 1.02; letter-spacing: -.025em;
+    margin: 0 0 .8rem; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.08rem; color: var(--muted); max-width: 40rem; margin: 0; }
+
+  p { margin: 0 0 1rem; max-width: 44rem; }
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--code); outline-offset: 3px; }
+
+  code {
+    font-family: "JetBrains Mono", monospace; font-size: .82em;
+    background: var(--code-soft); color: var(--code);
+    border-radius: 3px; padding: .08em .32em;
+  }
+  pre {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; line-height: 1.65;
+    background: var(--term); border: 1px solid var(--rule); border-left: 3px solid var(--code);
+    border-radius: 4px; padding: .85rem 1rem; overflow-x: auto; margin: 0 0 1rem;
+    color: var(--ink);
+  }
+  pre code { background: none; color: inherit; padding: 0; font-size: 1em; }
+  pre .c { color: var(--faint); }
+
+  /* part headings */
+  .part {
+    display: flex; align-items: baseline; gap: .9rem; flex-wrap: wrap;
+    margin: 3.5rem 0 .4rem; border-top: 2px solid var(--ink); padding-top: 1rem;
+  }
+  .part .n {
+    font-family: "JetBrains Mono", monospace; font-size: .7rem; font-weight: 700;
+    letter-spacing: .18em; color: var(--accent); text-transform: uppercase;
+  }
+  .part h2 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.55rem;
+    letter-spacing: -.018em; margin: 0; text-wrap: balance;
+  }
+  .part .mins {
+    font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--faint);
+    margin-left: auto;
+  }
+  .part + p { margin-top: .9rem; }
+
+  /* a numbered step */
+  .step { display: grid; grid-template-columns: 3.2rem 1fr; gap: 0 1rem; margin: 1.8rem 0; }
+  .step > .sn {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; font-weight: 700;
+    color: var(--accent); padding-top: .18rem; letter-spacing: .04em;
+  }
+  .step > .sb > :last-child { margin-bottom: 0; }
+  .step h3 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.08rem;
+    margin: 0 0 .5rem; letter-spacing: -.008em; line-height: 1.3;
+  }
+  @media (max-width: 34rem) { .step { grid-template-columns: 1fr; gap: .3rem; } }
+
+  /* boxes */
+  .box { border-radius: 0 5px 5px 0; padding: .85rem 1.05rem; margin: 1rem 0; max-width: 44rem; }
+  .box p:last-child { margin-bottom: 0; }
+  .box .l {
+    font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .14em;
+    text-transform: uppercase; display: block; margin-bottom: .4rem; font-weight: 700;
+  }
+  .task   { background: var(--accent-soft); border-left: 3px solid var(--accent); }
+  .task .l   { color: var(--accent); }
+  .think  { background: var(--code-soft); border-left: 3px solid var(--code); }
+  .think .l  { color: var(--code); }
+  .warn   { background: var(--fail-soft); border-left: 3px solid var(--fail); }
+  .warn .l   { color: var(--fail); }
+
+  .think ol { margin: .3rem 0 0; padding-left: 1.15rem; }
+  .think li { margin-bottom: .55rem; }
+  .think li:last-child { margin-bottom: 0; }
+  .task ul { margin: .3rem 0 0; padding-left: 1.15rem; }
+  .task li { margin-bottom: .35rem; }
+
+  /* tables */
+  .tw { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; min-width: 22rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: "JetBrains Mono", monospace; font-size: .61rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); font-weight: 500;
+    border-bottom: 2px solid var(--ink); white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td code { font-size: .78rem; }
+  td.n { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--faint); }
+
+  .v {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; font-weight: 700;
+    letter-spacing: .08em; padding: .15rem .45rem; border-radius: 3px; white-space: nowrap;
+  }
+  .v-run  { background: var(--fail-soft); color: var(--fail); border: 1px solid var(--fail); }
+  .v-stop { background: var(--pass-soft); color: var(--pass); border: 1px solid var(--pass); }
+  .v-none { background: var(--sunk); color: var(--faint); border: 1px solid var(--rule); }
+
+  .file {
+    font-family: "JetBrains Mono", monospace; font-size: .74rem;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 4px;
+    padding: .5rem .7rem; margin: 0 0 .8rem; display: block; color: var(--muted);
+    overflow-x: auto; white-space: nowrap;
+  }
+  .file b { color: var(--ink); font-weight: 700; }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">Lab F1 · 40 minutes · work through it on your own</p>
+  <h1>Make the analyst trustworthy</h1>
+  <p class="standfirst">Attack a SQL guard until you understand why it holds, work out where a row
+  limit actually belongs, then build the smallest thing that tells you whether a prompt change
+  helped.</p>
+</header>
+
+<p>Every step says what to type, what you should see, and what to do about it. You will not need
+Java or Maven on your laptop — you edit files, push, and the Space builds.</p>
+
+<div class="box warn">
+  <span class="l">Before you start — you need data in the table</span>
+  <p>This lab queries a loaded table from its first step. If you have not done this yet, do it now,
+  at <code>https://&lt;you&gt;-big-data-ai.hf.space/admin</code> — the <code>hf.space</code>
+  subdomain, not the Hub page, which will not proxy <code>/admin</code>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>Click</th><th>Takes</th><th>The log line that means it worked</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td><strong>Setup Environment</strong></td><td class="n">~10 s</td><td><code>✅ Warehouse created successfully</code>, or <code>✅ Warehouse already existed; storage profile updated</code>. Both are fine</td></tr>
+      <tr><td class="n">2</td><td><strong>Download Data</strong> · <code>2015</code></td><td class="n">~1 min</td><td><code>✅ Downloaded pp-2015.csv</code> — about 170 MB</td></tr>
+      <tr><td class="n">3</td><td><strong>Load Data</strong> · <code>2015</code></td><td class="n">~30 s</td><td><code>✅ Data loaded successfully from …pp-2015.csv</code></td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Every one of those buttons says "… operation initiated" whether or not it worked.</strong>
+  Keep the runtime log open beside them — it is the only place the truth is:</p>
+<pre><code>hf spaces logs &lt;you&gt;/big-data-ai --follow</code></pre>
+  <p><strong>Then confirm it before going on.</strong> Paste this into the SQL box and press Run
+  Query:</p>
+<pre><code>SELECT COUNT(*) FROM lakekeeper.housing.staging_prices</code></pre>
+  <p>You should get roughly <strong>1.01 million</strong>. If you get <code>0</code>, the load did not
+  work — read the log rather than clicking Load again.</p>
+</div>
+
+<p><strong>Three things are already written for you</strong>, because attacking a working guard
+teaches more in forty minutes than building one does:</p>
+
+<div class="tw"><table>
+  <thead><tr><th>File</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>app/SqlGuard.java</code></td><td>parses the SQL, rejects anything that is not a single read, caps rows</td></tr>
+    <tr><td><code>app/SchemaStore.java</code></td><td>reads the column list from the catalog, so it cannot go stale</td></tr>
+    <tr><td><code>app/SqlAnswer.java</code></td><td>the shape the model must reply in: <code>sql</code>, <code>columns_used</code>, <code>assumptions</code></td></tr>
+  </tbody>
+</table></div>
+
+<div class="part">
+  <span class="n">Part 1</span>
+  <h2>Break the guard</h2>
+  <span class="mins">15 min</span>
+</div>
+
+<div class="step">
+  <div class="sn">1.1</div>
+  <div class="sb">
+    <h3>Look at the line this whole lab is about</h3>
+    <span class="file">src/main/java/dev/prpatel/iceberg/app/<b>HomeController.java</b> · line 69</span>
+<pre><code>Dataset&lt;Row&gt; resultsDF = spark.sql(checked.sql());</code></pre>
+    <p>Now look three lines up, at line 66. Before this lab existed, line 69 read
+    <code>spark.sql(generatedsql)</code> — and <code>generatedsql</code> is a <strong>method
+    parameter bound to a form field</strong>. The generated SQL lands in an editable textarea on the
+    page, and whatever is in that box when you press Run is what executes.</p>
+    <p><strong>Nothing about that requires the model to misbehave.</strong> You are about to prove
+    it.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">1.2</div>
+  <div class="sb">
+    <h3>Attack it</h3>
+    <p>Open your Space, press <strong>Generate Query</strong> once so the box has something in it,
+    then <strong>delete that SQL and type each of these in, pressing Run each time.</strong> Write
+    down what you get.</p>
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>Type this into the SQL box</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td class="n">1</td><td><code>DROP TABLE lakekeeper.housing.staging_prices</code></td><td><span class="v v-stop">rejected</span></td></tr>
+        <tr><td class="n">2</td><td><code>SELECT 1; DROP TABLE lakekeeper.housing.staging_prices</code></td><td><span class="v v-stop">rejected</span></td></tr>
+        <tr><td class="n">3</td><td><code>INSERT INTO lakekeeper.housing.staging_prices SELECT * FROM lakekeeper.housing.staging_prices</code></td><td><span class="v v-stop">rejected</span></td></tr>
+        <tr><td class="n">4</td><td><code>CALL lakekeeper.system.rollback_to_snapshot('housing.staging_prices',1)</code></td><td><span class="v v-stop">rejected</span></td></tr>
+        <tr><td class="n">5</td><td><code>WITH x AS (SELECT town FROM lakekeeper.housing.staging_prices) SELECT * FROM x</code></td><td><span class="v v-run">runs</span></td></tr>
+        <tr><td class="n">6</td><td><code>SELECT/**/town FROM lakekeeper.housing.staging_prices</code></td><td><span class="v v-run">runs</span></td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>Read the rejection messages.</strong> They are not all the same, and the difference is
+    the point.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">1.3</div>
+  <div class="sb">
+    <h3>Find out why, in the code</h3>
+    <span class="file">src/main/java/dev/prpatel/iceberg/app/<b>SqlGuard.java</b></span>
+    <div class="tw"><table>
+      <thead><tr><th>Attempt</th><th>Line</th><th>What happened</th></tr></thead>
+      <tbody>
+        <tr><td class="n">1, 3</td><td class="n">83, 89</td><td>parsed fine — the guard rejected what it <em>meant</em>: a <code>Command</code>, or an <code>InsertInto</code></td></tr>
+        <tr><td class="n">2</td><td class="n">72</td><td>never parsed. <code>SELECT 1; DROP …</code> is two statements and Spark's parser refuses it, so there is no "second statement" to sneak through</td></tr>
+        <tr><td class="n">4</td><td class="n">72</td><td>also rejected — but read the message. It is a <code>NoClassDefFoundError</code>, not a parse error</td></tr>
+        <tr><td class="n">5, 6</td><td class="n">—</td><td>nothing rejected them, because they are reads</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">1.4</div>
+  <div class="sb">
+    <h3>Answer these before moving on</h3>
+    <div class="box think">
+      <span class="l">Write your answers down — this is the lab, not the typing</span>
+      <ol>
+        <li><strong>Attempt 6 is the comment trick.</strong> If the guard were
+        <code>if (sql.toUpperCase().startsWith("SELECT"))</code>, would attempt 6 pass? Would attempt
+        2? Now explain in one sentence why parsing beats pattern matching. <em>Hint: one of them is a
+        read a regex would reject, and one is a write a naive regex would accept.</em></li>
+        <li><strong>Attempt 4 threw an <code>Error</code>, not an <code>Exception</code>.</strong>
+        Line 72 catches <code>Throwable</code>. If it caught <code>Exception</code> instead, what
+        would a user see when they run a <code>CALL</code>? Better or worse than a rejection?</li>
+        <li><strong>Attempt 5 ran.</strong> Is that a bug? Argue both sides in two sentences.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">1.5</div>
+  <div class="sb">
+    <h3>Now change something</h3>
+    <p>The guard allows a read of <em>any</em> table. Make it allow only the <code>housing</code>
+    namespace.</p>
+    <div class="box task">
+      <span class="l">Do this</span>
+      <ul>
+        <li>Open <code>SqlGuard.java</code>, find <code>check(String sql, int rows)</code> at line 62</li>
+        <li>After the <code>InsertInto</code> check at line 89, add your own check. You have
+        <code>plan</code>, a parsed tree — <code>plan.toString()</code> contains the table names it
+        touches, which is enough here</li>
+        <li>Throw <code>new RejectedException("…")</code> with a message that tells the user what
+        they did wrong</li>
+        <li>Commit, <code>git push hf main</code>, wait for the build, then try
+        <code>SELECT * FROM lakekeeper.system.snapshots</code> and confirm it is now refused</li>
+      </ul>
+    </div>
+    <p><strong>Finished early?</strong> Your check probably rejects <code>SELECT 1</code> too, which
+    touches no table at all. Decide whether that is correct, and make it deliberate either way.</p>
+  </div>
+</div>
+
+<div class="part">
+  <span class="n">Part 2</span>
+  <h2>Where a row limit belongs</h2>
+  <span class="mins">10 min</span>
+</div>
+
+<div class="step">
+  <div class="sn">2.1</div>
+  <div class="sb">
+    <h3>See the cap work</h3>
+    <p>In the <strong>Rows to return</strong> box, try <code>3</code>, then <code>7</code>, then
+    <code>500</code>, running this each time:</p>
+<pre><code>SELECT town FROM lakekeeper.housing.staging_prices</code></pre>
+    <p>You get 3, then 7, then <strong>200</strong> — not 500.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">2.2</div>
+  <div class="sb">
+    <h3>Find out why</h3>
+    <span class="file">src/main/java/dev/prpatel/iceberg/app/<b>SqlGuard.java</b> · line 63</span>
+<pre><code>int cap = rows &gt; 0 ? Math.min(rows, maxRows) : maxRows;</code></pre>
+    <p><code>maxRows</code> comes from <code>app.sql.max-rows</code> in
+    <code>application.properties</code> (line 74), which is <code>200</code>. <strong>A
+    user-supplied bound still needs a bound</strong> — otherwise the box on the page is just a slower
+    way to ask for everything.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">2.3</div>
+  <div class="sb">
+    <h3>The question worth arguing about</h3>
+    <p>Three places this limit could have gone. Only one bounds the work.</p>
+    <div class="tw"><table>
+      <thead><tr><th>Where</th><th>Why it is wrong, or right</th></tr></thead>
+      <tbody>
+        <tr><td>In the system prompt<br><em>"always add a LIMIT"</em></td><td>the model complies <strong>sometimes</strong>. Check this repo's git log for <code>Limit query results to 10 rows in system prompt</code> — and the revert that followed</td></tr>
+        <tr><td>At render time<br><code>formatDataSet(df, 200)</code></td><td><code>HomeController</code> calls <code>df.count()</code> <strong>before</strong> formatting. The count already scanned every row. You truncated the display, not the work</td></tr>
+        <tr><td><code>.limit(n)</code> in the plan<br>what <code>SqlGuard</code> does</td><td>Spark plans for <em>n</em> rows and stops</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">2.4</div>
+  <div class="sb">
+    <h3>Prove it</h3>
+    <p>Set <strong>Rows to return</strong> to <code>1</code> and run
+    <code>SELECT * FROM lakekeeper.housing.staging_prices</code>. Now open the runtime log:</p>
+<pre><code>hf spaces logs &lt;you&gt;/big-data-ai --follow</code></pre>
+    <p>Look at the query Spark actually ran — the guard rewrote it as
+    <code>SELECT * FROM (…) LIMIT 1</code>. That rewrite is <code>SqlGuard.java</code> line 97.</p>
+    <div class="box task">
+      <span class="l">Optional</span>
+      <p>Make the app log how long each query took, so Part 3's latency column has a second source.
+      <code>HomeController.runquery</code> already has the structure — one
+      <code>System.currentTimeMillis()</code> either side of line 69.</p>
+    </div>
+  </div>
+</div>
+
+<div class="part">
+  <span class="n">Part 3</span>
+  <h2>Build an eval set</h2>
+  <span class="mins">20 min</span>
+</div>
+
+<p>This is the deliverable. Everyone has shipped an LLM feature with no way to tell whether a prompt
+change helped. This is the smallest thing that fixes that — and F2 uses it within the hour.</p>
+
+<div class="step">
+  <div class="sn">3.1</div>
+  <div class="sb">
+    <h3>Run it once, empty, to see the shape</h3>
+    <p>Two files already exist in your clone:</p>
+<pre><code>cat scripts/questions.csv         <span class="c"># five questions, four with no expected answer yet</span>
+./scripts/eval.sh &lt;you&gt;/big-data-ai</code></pre>
+    <p>You get a table like this — and most of the <code>correct</code> column says
+    <code>--</code>, meaning <strong>not scored</strong>:</p>
+<pre><code>id    generated ran     correct   ms
+----------------------------------------------------------
+q01   yes       yes     no        2000
+q02   yes       yes     --        1000</code></pre>
+    <p>It needs only <code>curl</code> and the <code>hf</code> CLI. It talks to your deployed Space
+    over HTTP — the same thing a person using the app talks to.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">3.2</div>
+  <div class="sb">
+    <h3>Fill in the expected answers</h3>
+    <p><strong>This is the actual exercise, and it is where people stall.</strong> Do not invent the
+    numbers. Derive them:</p>
+    <div class="box task">
+      <span class="l">For each question in the csv</span>
+      <ul>
+        <li>Take the question — say <em>"What is the highest price paid in Camden in 2015?"</em></li>
+        <li>Paste it into the app, press <strong>Generate Query</strong>, then <strong>Run Query</strong></li>
+        <li><strong>Read the answer, and satisfy yourself it is right.</strong> Look at the SQL it
+        generated. Did it filter on the year the way you meant? Is <code>Camden</code> in
+        <code>town</code> or in <code>district</code>? <em>This is the moment you discover the
+        question was ambiguous.</em></li>
+        <li>Put that value in the <code>expected</code> column of <code>scripts/questions.csv</code></li>
+        <li>Re-run <code>./scripts/eval.sh</code> — that row should now say <code>yes</code></li>
+      </ul>
+    </div>
+    <p><strong>Deciding what "correct" means <em>is</em> the lab.</strong> If you cannot write down
+    the expected answer, the question is not answerable — and no model was ever going to get it
+    right.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">3.3</div>
+  <div class="sb">
+    <h3>Write five more</h3>
+    <p>Aim for a spread, because a set where everything passes teaches nothing:</p>
+    <div class="tw"><table>
+      <thead><tr><th>How many</th><th>What kind</th></tr></thead>
+      <tbody>
+        <tr><td class="n">2</td><td>you are confident it gets right — a simple count, a simple max</td></tr>
+        <tr><td class="n">2</td><td>ambiguous <em>on purpose</em> — "recent sales", "expensive houses" — then see what it assumes</td></tr>
+        <tr><td class="n">1</td><td>needs two conditions at once: a town <strong>and</strong> a property type <strong>and</strong> a year</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">3.4</div>
+  <div class="sb">
+    <h3>Read the result properly</h3>
+    <p>The three gates are cumulative, and the shape tells you where the problem is.</p>
+    <div class="tw"><table>
+      <thead><tr><th>Scores</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td class="n">10 / 10 / 3</td><td>the SQL is valid and runs, but answers the wrong question. <strong>A prompt problem</strong></td></tr>
+        <tr><td class="n">10 / 4 / 4</td><td>the SQL is often invalid or gets rejected. <strong>A model-capability problem</strong></td></tr>
+        <tr><td class="n">4 / 4 / 4</td><td>it frequently returns nothing usable. Check the runtime log — probably not returning JSON</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">3.5</div>
+  <div class="sb">
+    <h3>Run it twice on the same model, changing nothing</h3>
+    <p>The scores will differ. That non-determinism is the thing most people have never actually
+    measured on their own feature.</p>
+    <div class="box think">
+      <span class="l">Keep this answer — F2 will use it</span>
+      <p>How many runs would you need before you would believe a prompt change had helped?</p>
+    </div>
+    <div class="box warn">
+      <span class="l">Watch the cost</span>
+      <p>Each run is one inference call per question, billed to your credits. Five questions is fine.
+      Do not put fifty in the csv and leave it looping.</p>
+    </div>
+  </div>
+</div>
+
+</div>

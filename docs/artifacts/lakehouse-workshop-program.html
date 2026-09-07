@@ -1,0 +1,969 @@
+<title>Lakehouse Workshop Program</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+
+<style>
+  :root {
+    --ground:   #FAF9FC;
+    --surface:  #FFFFFF;
+    --sunk:     #F1EFF5;
+    --ink:      #17141F;
+    --muted:    #5A5370;
+    --faint:    #837B99;
+    --rule:     #E3DFEB;
+    --accent:   #C96A05;   /* HF-adjacent amber, darkened to hold on white */
+    --accent-soft: #FBEEDC;
+    --time:     #5646CE;   /* schedule / structure */
+    --time-soft: #EDEAFB;
+    --shadow:   0 1px 2px rgba(23,20,31,.05), 0 10px 30px -22px rgba(23,20,31,.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:  #0E0C13;
+      --surface: #171420;
+      --sunk:    #13111B;
+      --ink:     #EDEAF4;
+      --muted:   #A199B5;
+      --faint:   #7E7595;
+      --rule:    #2A2537;
+      --accent:  #FFB44D;
+      --accent-soft: #2B1E0E;
+      --time:    #A594FF;
+      --time-soft: #1D1836;
+      --shadow:  0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:  #0E0C13;
+    --surface: #171420;
+    --sunk:    #13111B;
+    --ink:     #EDEAF4;
+    --muted:   #A199B5;
+    --faint:   #7E7595;
+    --rule:    #2A2537;
+    --accent:  #FFB44D;
+    --accent-soft: #2B1E0E;
+    --time:    #A594FF;
+    --time-soft: #1D1836;
+    --shadow:  0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.6;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page { max-width: 64rem; margin: 0 auto; padding: clamp(2rem,5vw,4rem) clamp(1rem,4vw,3rem) 6rem; }
+
+  /* masthead */
+  .masthead { border-bottom: 3px double var(--rule); padding-bottom: 1.8rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(2.4rem, 6.5vw, 4rem); line-height: .98; letter-spacing: -.025em;
+    margin: 0 0 1rem; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.15rem; color: var(--muted); max-width: 40rem; margin: 0; }
+  .facts { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.6rem; }
+  .fact {
+    font-family: "JetBrains Mono", monospace; font-size: .72rem; letter-spacing: .04em;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 999px;
+    padding: .3rem .8rem; color: var(--muted); white-space: nowrap;
+  }
+
+  h2 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.9rem;
+    letter-spacing: -.018em; margin: 0 0 .6rem; text-wrap: balance;
+  }
+  .sec { margin-top: 4rem; }
+  .sec > p { max-width: 40rem; }
+  h3 {
+    font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: .7rem;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--faint);
+    margin: 1.7rem 0 .5rem;
+  }
+  p { margin: 0 0 1rem; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--time); outline-offset: 3px; }
+  em { font-style: italic; }
+  strong { font-weight: 600; }
+
+  code {
+    font-family: "JetBrains Mono", monospace; font-size: .82em;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 3px; padding: .05em .3em;
+  }
+  pre {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; line-height: 1.7;
+    background: var(--sunk); border: 1px solid var(--rule); border-left: 3px solid var(--time);
+    border-radius: 4px; padding: .9rem 1rem; overflow-x: auto; margin: 0 0 1rem;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: 1em; }
+  pre .c { color: var(--faint); }
+
+  /* schedule */
+  .schedule { border-top: 2px solid var(--ink); margin-top: 1.5rem; }
+  .slot {
+    display: grid; grid-template-columns: 7.5rem 1fr auto; gap: 1rem;
+    padding: .7rem 0; border-bottom: 1px solid var(--rule); align-items: baseline;
+  }
+  .slot .t {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; color: var(--time);
+    font-weight: 500; font-variant-numeric: tabular-nums;
+  }
+  .slot .n { font-weight: 600; }
+  .slot .n span { font-weight: 400; color: var(--muted); }
+  .slot .b {
+    font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .12em;
+    text-transform: uppercase; padding: .18rem .5rem; border-radius: 3px; white-space: nowrap;
+  }
+  .b-core { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+  .b-pick { background: var(--time-soft); color: var(--time); border: 1px solid var(--time); }
+  .b-none { color: var(--faint); border: 1px solid transparent; }
+
+  /* lab cards */
+  .labs { display: flex; flex-direction: column; gap: 1.5rem; margin-top: 2rem; }
+  .lab {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 8px;
+    box-shadow: var(--shadow); padding: 1.6rem 1.7rem; position: relative;
+  }
+  .lab-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .7rem 1rem; margin-bottom: .2rem; }
+  .lab-no {
+    font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: .72rem;
+    letter-spacing: .14em; color: var(--accent); text-transform: uppercase;
+  }
+  .lab-dur { font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--faint); margin-left: auto; }
+  .guide {
+    font-family: "JetBrains Mono", monospace; font-size: .72rem; letter-spacing: .02em;
+    margin: .1rem 0 .9rem; padding: .4rem .7rem; border-radius: 5px;
+    background: var(--accent-soft); border: 1px solid var(--accent); display: inline-block;
+  }
+  .guide a { font-weight: 700; text-decoration: none; }
+  .guide a:hover { text-decoration: underline; }
+  .lab h3.lab-title {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.45rem;
+    letter-spacing: -.012em; text-transform: none; color: var(--ink);
+    margin: 0 0 .5rem; width: 100%; line-height: 1.15;
+  }
+  .lab > p:last-child { margin-bottom: 0; }
+  .lab p { max-width: 44rem; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
+  .chip {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .06em;
+    padding: .28rem .6rem; border-radius: 3px; border: 1px solid var(--rule); color: var(--muted);
+  }
+  .chip b { color: var(--ink); font-weight: 700; }
+  .chip.hot { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .chip.hot b { color: var(--accent); }
+
+  /* tables */
+  .tw { overflow-x: auto; margin: 1.2rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; min-width: 26rem; }
+  th, td { text-align: left; padding: .6rem .8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: "JetBrains Mono", monospace; font-size: .64rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); font-weight: 500;
+    border-bottom: 2px solid var(--ink);
+  }
+  td.num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td strong { font-weight: 600; }
+
+  /* callout */
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 4px 4px 0; padding: .9rem 1.1rem; margin: 1.2rem 0; max-width: 44rem;
+  }
+  .note p { margin: 0; font-size: .95rem; }
+  .note p + p { margin-top: .5rem; }
+  .note .l {
+    font-family: "JetBrains Mono", monospace; font-size: .64rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); display: block; margin-bottom: .35rem;
+  }
+
+  /* figure */
+  figure {
+    margin: 2rem 0; padding: 1.5rem; background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); overflow-x: auto;
+  }
+  figure svg { display: block; width: 100%; min-width: 660px; height: auto; color: var(--ink); }
+  figcaption {
+    font-size: .88rem; color: var(--muted); margin-top: 1.1rem; padding-top: .9rem;
+    border-top: 1px solid var(--rule); max-width: 46rem;
+  }
+  .b-node { fill: var(--surface); stroke: currentColor; stroke-width: 1.3; }
+  .b-hf   { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+  .b-core2{ fill: var(--time-soft); stroke: var(--time); stroke-width: 1.5; }
+  .b-gone { fill: none; stroke: var(--faint); stroke-width: 1; stroke-dasharray: 4 3; }
+  .s-t  { font-family: "Bricolage Grotesque", sans-serif; font-size: 13px; font-weight: 600; fill: var(--ink); }
+  .s-m  { font-family: "JetBrains Mono", monospace; font-size: 10.5px; fill: var(--muted); }
+  .s-lab{ font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; letter-spacing: .06em; fill: var(--accent); }
+  .s-gone { font-family: "JetBrains Mono", monospace; font-size: 10.5px; fill: var(--faint); }
+  .ln { stroke: currentColor; stroke-width: 1.4; fill: none; }
+
+  ul { margin: 0 0 1rem; padding-left: 1.2rem; max-width: 42rem; }
+  li { margin-bottom: .4rem; }
+  li::marker { color: var(--accent); }
+
+  hr.sep { border: 0; border-top: 3px double var(--rule); margin: 3.5rem 0; }
+
+  @media (max-width: 620px) {
+    .slot { grid-template-columns: 5.5rem 1fr; }
+    .slot .b { grid-column: 2; justify-self: start; }
+    .lab-dur { margin-left: 0; }
+  }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">Hands-on workshop · design brief</p>
+  <h1>Lakehouse&nbsp;+ AI Analyst, entirely&nbsp;on Hugging&nbsp;Face</h1>
+  <p class="standfirst">Six labs that take an Iceberg/Spark/Spring app from a laptop demo to a
+  platform running on Hub infrastructure — and send every attendee home with a text-to-SQL eval
+  harness they'll actually reuse.</p>
+  <div class="facts">
+    <span class="fact">3.5–4 hours</span>
+    <span class="fact">backend / data / platform engineers</span>
+    <span class="fact">no local Docker required</span>
+    <span class="fact">≈ $30 total compute</span>
+  </div>
+</header>
+
+<section class="sec">
+  <h2>Every lab has to pass two tests</h2>
+  <p>A workshop that only teaches the vendor is marketing, and a technical room can smell it in ten
+  minutes. A workshop that teaches nothing about the venue's platform wastes the venue. So each lab
+  below carries two scores, and both have to be real:</p>
+  <div class="chips" style="border-top:0; padding-top:0;">
+    <span class="chip"><b>Useful anywhere</b> — the skill transfers even if they never open huggingface.co again</span>
+    <span class="chip hot"><b>Better on HF</b> — the Hub is the shortest path to the result, not a detour</span>
+  </div>
+</section>
+
+<section class="sec">
+  <h2>Where the day ends up</h2>
+  <p>The app starts as a single container with everything bundled inside it. By the close, each
+  external box below is a Hugging Face service, and each edge is created by a specific lab.</p>
+
+  <figure>
+    <svg viewBox="0 0 900 540" role="img" aria-label="Architecture diagram of the end state: the attendee's Space sits in the middle; H2 moves Iceberg data files to a Hugging Face bucket over the s3.hf.co gateway, replacing the bundled MinIO; Labs 1 and 2 route question-to-SQL through the Inference Providers router; H4 moves bulk ingest to a Hugging Face Job that writes to the bucket directly, bypassing the app; H3 publishes Parquet to a dataset repo; R5 exposes an MCP tool endpoint to an agent.">
+      <defs>
+        <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+        </marker>
+      </defs>
+
+      <!-- source -->
+      <rect class="b-node" x="330" y="40" width="240" height="56" rx="5"></rect>
+      <text class="s-t" x="450" y="66" text-anchor="middle">HM Land Registry</text>
+      <text class="s-m" x="450" y="83" text-anchor="middle">pp-YYYY.csv · 1M rows/year</text>
+
+      <!-- space -->
+      <rect class="b-core2" x="310" y="200" width="280" height="110" rx="6"></rect>
+      <text class="s-t" x="450" y="228" text-anchor="middle">Your Space</text>
+      <text class="s-m" x="450" y="248" text-anchor="middle">Spring Boot · Spark local[*]</text>
+      <text class="s-m" x="450" y="264" text-anchor="middle">LakeKeeper · Postgres</text>
+      <text class="s-m" x="450" y="288" text-anchor="middle">&lt;you&gt;-big-data-ai.hf.space</text>
+      <rect class="b-gone" x="330" y="330" width="240" height="30" rx="4"></rect>
+      <text class="s-gone" x="450" y="350" text-anchor="middle">MinIO — not in the path</text>
+
+      <!-- bucket -->
+      <rect class="b-hf" x="30" y="200" width="230" height="72" rx="5"></rect>
+      <text class="s-t" x="145" y="228" text-anchor="middle">HF Storage Bucket</text>
+      <text class="s-m" x="145" y="247" text-anchor="middle">Iceberg data + metadata</text>
+      <text class="s-m" x="145" y="263" text-anchor="middle">browsable on the Hub</text>
+      <text class="s-lab" x="145" y="292" text-anchor="middle">H2 · via s3.hf.co gateway</text>
+
+      <!-- router -->
+      <rect class="b-hf" x="640" y="40" width="230" height="72" rx="5"></rect>
+      <text class="s-t" x="755" y="68" text-anchor="middle">Inference Providers</text>
+      <text class="s-m" x="755" y="87" text-anchor="middle">router.huggingface.co/v1</text>
+      <text class="s-m" x="755" y="103" text-anchor="middle">~20 providers, one token</text>
+      <text class="s-lab" x="755" y="132" text-anchor="middle">LABS 1–2 · question → SQL</text>
+
+      <!-- agent -->
+      <rect class="b-node" x="640" y="200" width="230" height="72" rx="5"></rect>
+      <text class="s-t" x="755" y="228" text-anchor="middle">Any MCP agent</text>
+      <text class="s-m" x="755" y="247" text-anchor="middle">describe_table()</text>
+      <text class="s-m" x="755" y="263" text-anchor="middle">run_query(sql)</text>
+      <text class="s-lab" x="755" y="292" text-anchor="middle">R5 · /mcp endpoint</text>
+
+      <!-- job -->
+      <rect class="b-hf" x="30" y="390" width="230" height="72" rx="5"></rect>
+      <text class="s-t" x="145" y="418" text-anchor="middle">HF Job</text>
+      <text class="s-m" x="145" y="437" text-anchor="middle">cpu-performance · per-minute</text>
+      <text class="s-m" x="145" y="453" text-anchor="middle">scheduled or webhook-fired</text>
+
+      <!-- dataset -->
+      <rect class="b-hf" x="640" y="390" width="230" height="72" rx="5"></rect>
+      <text class="s-t" x="755" y="418" text-anchor="middle">Dataset repo</text>
+      <text class="s-m" x="755" y="437" text-anchor="middle">Parquet + card</text>
+      <text class="s-m" x="755" y="453" text-anchor="middle">viewer + DuckDB console free</text>
+      <text class="s-lab" x="755" y="482" text-anchor="middle">H3 · publish + compare engines</text>
+
+      <!-- edges -->
+      <path class="ln" d="M450,96 V192" marker-end="url(#a2)"></path>
+      <text class="s-lab" x="462" y="140">H1</text>
+      <text class="s-m" x="462" y="156">one year, in a web request</text>
+
+      <path class="ln" d="M330,68 H285 V368 H160" marker-end="url(#a2)"></path>
+      <text class="s-lab" x="272" y="384" text-anchor="end">H4 · all 11 years, off the app</text>
+
+      <path class="ln" d="M310,236 H268" marker-end="url(#a2)"></path>
+      <path class="ln" d="M200,390 V280" marker-end="url(#a2)"></path>
+      <text class="s-m" x="212" y="330">writes straight</text>
+      <text class="s-m" x="212" y="345">to storage</text>
+
+      <path class="ln" d="M520,200 V76 H632" marker-end="url(#a2)"></path>
+      <path class="ln" d="M598,236 H632" marker-start="url(#a2)"></path>
+      <path class="ln" d="M580,310 V426 H632" marker-end="url(#a2)"></path>
+    </svg>
+    <figcaption>The bundled MinIO is the only box that goes away. Everything else is added, and the
+    one edge worth arguing about is <strong>H4's</strong>: the Job writes to the bucket without
+    passing through the app at all, which is the whole point of separating batch from serving.</figcaption>
+  </figure>
+</section>
+
+<section class="sec">
+  <h2>Timetable</h2>
+  <p>Labs 0–3 are the spine and run in order. The last slot is chosen live, based on how the room
+  is doing — the three candidates are independent of each other.</p>
+
+  <div class="schedule">
+    <div class="slot"><span class="t">0:00 – 0:15</span><span class="n">Intro <span>— and everyone starts their Space build, which runs while you talk</span></span><span class="b b-none">setup</span></div>
+    <div class="slot"><span class="t">0:15 – 0:45</span><span class="n">H1 <span>— Ship the thing</span></span><span class="b b-core">core</span></div>
+    <div class="slot"><span class="t">0:45 – 1:25</span><span class="n">F1 <span>— Make the analyst trustworthy</span></span><span class="b b-core">core</span></div>
+    <div class="slot"><span class="t">1:25 – 1:35</span><span class="n">Break</span><span class="b b-none"></span></div>
+    <div class="slot"><span class="t">1:35 – 2:05</span><span class="n">F2 <span>— Model bake-off</span></span><span class="b b-core">core</span></div>
+    <div class="slot"><span class="t">2:05 – 2:10</span><span class="n">H2 <span>— Where the data actually lives</span></span><span class="b b-none">demo</span></div>
+    <div class="slot"><span class="t">2:10 – 2:40</span><span class="n">A11 <span>— Don't make me read a table</span></span><span class="b b-core">core</span></div>
+    <div class="slot"><span class="t">2:40 – 2:50</span><span class="n">Break</span><span class="b b-none"></span></div>
+    <div class="slot"><span class="t">2:50 – 3:30</span><span class="n">H4, 5 <span>or</span> 6 <span>— Jobs · Publish &amp; engine shootout · MCP</span></span><span class="b b-pick">pick one</span></div>
+    <div class="slot"><span class="t">3:30 – 3:50</span><span class="n">Demos <span>— every Space added to a shared Collection</span></span><span class="b b-none"></span></div>
+    <div class="slot"><span class="t">3:50 – 4:00</span><span class="n">Wrap</span><span class="b b-none"></span></div>
+  </div>
+
+  <div class="note">
+    <span class="l">If you only have three hours</span>
+    <p>Run H1, F1 and F2, and demo H2 from the stage. <strong>F1 is the one that must not be
+    cut</strong> — it is the reason technical people came, and it is the only lab whose output they
+    will still be using next month.</p>
+  </div>
+</section>
+
+<hr class="sep">
+
+<h2>The labs</h2>
+
+<div class="labs">
+
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">H1</span><span class="lab-dur">30 min</span>
+      <h3 class="lab-title">Ship the thing</h3>
+    </div>
+    <p><strong>Goal:</strong> everyone has a URL that answers a question in English, over data they
+    loaded themselves.</p>
+<p>They deploy by <strong>pushing to the Space's git remote</strong> — which is also the dev
+    loop for the rest of the day: edit locally, commit, push, watch it build.</p>
+<pre><code><span class="c"># ---- 1. the code -------------------------------------------------------</span>
+git clone https://github.com/prpatel/big-data-ai big-data-ai
+cd big-data-ai
+
+<span class="c"># ---- 2. the Space (cpu-upgrade, not the free cpu-basic) -----------------</span>
+hf repos create &lt;you&gt;/big-data-ai --repo-type space --sdk docker --private --flavor cpu-upgrade
+
+<span class="c"># ---- 3. two buckets: lakehouse is mounted, warehouse is not -------------</span>
+hf buckets create &lt;you&gt;/lakehouse --private
+hf buckets create &lt;you&gt;/warehouse --private
+hf spaces volumes set &lt;you&gt;/big-data-ai -v hf://buckets/&lt;you&gt;/lakehouse:/data
+hf spaces volumes ls &lt;you&gt;/big-data-ai
+
+<span class="c"># ---- 4. S3 credentials: browser only ------------------------------------</span>
+<span class="c"># tokens page -&gt; the token's ... menu -&gt; Generate S3 credentials</span>
+
+<span class="c"># ---- 5. settings from a file, not seven flags ---------------------------</span>
+cat &gt; space.env &lt;&lt;'EOF'
+APP_S3_ENDPOINT=https://s3.hf.co
+APP_S3_BUCKET=&lt;you&gt;
+APP_S3_KEY_PREFIX=warehouse
+APP_S3_STS_ENABLED=false
+APP_S3_CREATE_BUCKET=false
+APP_S3_CLIENT_SIDE_SIGNING=true
+APP_WAREHOUSE_EXPLICIT_LOCATION=false
+EOF
+
+cat space.env                  <span class="c"># APP_S3_BUCKET is your USERNAME</span>
+hf spaces variables add &lt;you&gt;/big-data-ai --env-file space.env
+hf spaces variables ls &lt;you&gt;/big-data-ai    <span class="c"># must list all seven</span>
+
+<span class="c"># ---- 6. the three secrets, one at a time --------------------------------</span>
+hf spaces secrets add &lt;you&gt;/big-data-ai -s HF_TOKEN=hf_xxx
+hf spaces secrets add &lt;you&gt;/big-data-ai -s APP_S3_ACCESS_KEY=HFAK...
+hf spaces secrets add &lt;you&gt;/big-data-ai -s APP_S3_SECRET_KEY=...
+hf spaces secrets ls &lt;you&gt;/big-data-ai
+
+<span class="c"># ---- 7. deploy -----------------------------------------------------------</span>
+git remote add hf https://huggingface.co/spaces/&lt;you&gt;/big-data-ai
+git push --force hf main
+
+<span class="c"># ---- 8. watch it, then prove it is bucket-backed -------------------------</span>
+hf spaces logs &lt;you&gt;/big-data-ai --build --follow
+hf spaces wait &lt;you&gt;/big-data-ai
+hf spaces logs &lt;you&gt;/big-data-ai --follow   <span class="c"># runtime log - keep it open all day</span>
+hf spaces logs &lt;you&gt;/big-data-ai | grep EMBEDDED_MINIO
+<span class="c">#   [init] EMBEDDED_MINIO=0; the warehouse lives in external storage (https://s3.hf.co)</span>
+<span class="c"># ---- 9. load the data, at https://&lt;you&gt;-big-data-ai.hf.space/admin ------</span>
+<span class="c"># Keep the runtime log open. All three buttons say "... operation initiated"</span>
+<span class="c"># whether or not they worked - the log is the only place the truth is.</span>
+<span class="c">#</span>
+<span class="c">#   Setup Environment   ~10s  -&gt; Warehouse created (or "already existed; updated")</span>
+<span class="c">#   Download Data 2015  ~1m   -&gt; Downloaded pp-2015.csv, about 170 MB</span>
+<span class="c">#   Load Data     2015  ~30s  -&gt; Data loaded successfully</span>
+<span class="c">#</span>
+<span class="c"># Then confirm it, in the SQL box on the home page:</span>
+<span class="c">#   SELECT COUNT(*) FROM lakekeeper.housing.staging_prices   -&gt; about about 1.01 million</span>
+<span class="c"># If you get 0, the load failed. Read the log; do not just click Load again.</span></code></pre>
+    <p>The Space runs <strong>bucket-backed</strong>: no MinIO, and the warehouse is genuine Parquet
+    on the Hub from the first load. See the Handbook for the diagram of how the app, LakeKeeper and
+    the two buckets fit together — worth putting on a slide, because the split confuses people.</p>
+    <p>Three things to say out loud while that runs:</p>
+    <ul>
+      <li><strong><code>--force</code> on the first push is expected, not a mistake.</strong>
+      <code>hf repos create</code> initialises the Space with its own README commit, so local
+      <code>main</code> has unrelated history. The Space is seconds old — force-push it.</li>
+      <li><strong>The README's YAML frontmatter is the Space's config.</strong> <code>sdk: docker</code>
+      is what makes it build the Dockerfile, and 7860 is already HF's default <code>app_port</code>.
+      If a Space builds then 404s, look there first.</li>
+      <li><strong><code>data/</code> is gitignored</strong> and <code>.gitattributes</code> already
+      carries HF's LFS rules, so the push is a couple of hundred kilobytes. Nobody should ever commit
+      a <code>pp-YYYY.csv</code>.</li>
+    </ul>
+    <p>Then <strong>Setup Environment → Download 2015 → Load</strong> on <code>/admin</code>, and ask
+    the home page a question.</p>
+    <h3>Teach while the builds run</h3>
+    <p>Walk the three admin buttons and what each one touches. Also warn them early: those buttons
+    always answer <em>“… operation initiated”</em> whether the work succeeded or not, so
+    <code>hf spaces logs --follow</code> is the real feedback channel. They'll need it all day.</p>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> Docker + secrets + volumes</span>
+      <span class="chip hot"><b>Better on HF</b> push-to-deploy — the build runs server-side, so nobody runs <code>docker build</code> on venue wifi</span>
+    </div>
+  </article>
+
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">F1 · the keystone</span><span class="lab-dur">40 min</span>
+      <h3 class="lab-title">Make the analyst trustworthy</h3>
+    </div>
+    <p class="guide"><a href="https://claude.ai/code/artifact/250819f3-61a5-4ddb-a20d-8573e8be30ab">Step-by-step build guide &rarr;</a></p>
+    <p>Three defects that were exercises in an earlier draft are <strong>already fixed in the code
+    they clone</strong> — <code>SqlGuard</code>, <code>SchemaStore</code> and <code>SqlAnswer</code>.
+    Attacking a working guard teaches more in forty minutes than building one, and a room of
+    twenty-five cannot all get a parser-based guard running before the break.</p>
+
+    <p>Put this on the screen and ask what could go wrong:</p>
+<pre><code>Dataset&lt;Row&gt; resultsDF = spark.sql(generatedsql);  <span class="c">// HomeController</span></code></pre>
+    <p>The answer they usually miss: <strong><code>generatedsql</code> is a form field.</strong> The
+    generated query lands in an editable textarea and whatever comes back is executed. No prompt
+    injection required — type <code>DROP TABLE</code> and press Run.</p>
+
+    <h3>1 · Break the guard — 15 min</h3>
+    <div class="tw"><table>
+      <thead><tr><th>Attempt</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>DROP TABLE …</code></td><td>rejected — would modify the warehouse</td></tr>
+        <tr><td><code>SELECT 1; DROP TABLE …</code></td><td>rejected — fails to <em>parse</em></td></tr>
+        <tr><td><code>INSERT INTO … SELECT</code> · <code>MERGE</code> · <code>DELETE</code></td><td>rejected — writes</td></tr>
+        <tr><td><code>CALL …rollback_to_snapshot(…)</code></td><td>rejected, but via <code>NoClassDefFoundError</code></td></tr>
+        <tr><td><code>WITH x AS (SELECT …) SELECT * FROM x</code></td><td><strong>runs</strong> — a CTE is a read</td></tr>
+        <tr><td><code>SELECT/**/town FROM …</code></td><td><strong>runs</strong> — comments change nothing</td></tr>
+      </tbody>
+    </table></div>
+    <p><strong>The debrief is the last two rows.</strong> A regex would have rejected the CTE and
+    been fooled by the comment. The parser asks Spark what the text <em>means</em>, not what it looks
+    like. And <code>CALL</code> is why the guard catches <code>Throwable</code>: Iceberg's parser
+    throws an <code>Error</code>, and "cannot confidently parse this" and "will not run it" are the
+    same answer.</p>
+
+    <h3>2 · Where a row limit belongs — 10 min</h3>
+    <p>Try the <strong>Rows to return</strong> field at 3, 7, then 500. Three places you could put a
+    limit: the prompt (the model complies <em>sometimes</em> — this repo has the git history), render
+    time (<code>count()</code> already scanned everything), or <code>.limit(n)</code> in the plan.
+    Only the third bounds the work. 500 comes back as 200, because a user-supplied bound still needs
+    a bound.</p>
+
+    <h3>3 · The deliverable: an eval set — 20 min</h3>
+    <p>Ten questions with known-correct answers in a CSV, and a runner scoring four cumulative gates:
+    <strong>generated? → parses? → executes? → correct?</strong> plus latency. The order matters —
+    10/10/10/3 is a completely different problem from 10/4/4/4.</p>
+    <div class="note">
+      <span class="l">Where attendees stall</span>
+      <p>They try to <em>invent</em> the expected answers. They should <em>derive</em> them: run the
+      query by hand in the box, read the answer, record it. Writing the ten questions is the
+      exercise, because it forces them to decide what "correct" means.</p>
+      <p style="margin-top:.55rem">Say two things before they start: ten questions is ten inference
+      calls per run on their own credits, so start with five — and <strong>run it twice on the same
+      model</strong>. The scores will differ, and that non-determinism is what most of the room has
+      never measured. Debrief question: <em>"how many runs before you would believe a prompt change
+      helped?"</em></p>
+    </div>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> ✓✓ entirely portable</span>
+      <span class="chip hot"><b>Better on HF</b> the model swap in F2 becomes one string</span>
+    </div>
+  </article>
+
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">F2</span><span class="lab-dur">30 min</span>
+      <h3 class="lab-title">Model bake-off on Inference Providers</h3>
+    </div>
+    <p class="guide"><a href="https://claude.ai/code/artifact/04543121-4442-407f-9c7f-1c228bc131d1">Step-by-step build guide &rarr;</a></p>
+    <p><strong>First half of the lab: make the model a runtime parameter.</strong> It's currently
+    pinned in <code>application.properties</code> and baked into the <code>ChatClient</code> at
+    construction, so comparing four models the obvious way costs four deploys. One push fixes it —
+    have <code>generateQuery()</code> take a model name and set it per call with
+    <code>OpenAiChatOptions.builder().model(id)</code>. After that, the whole bake-off runs with no
+    further deploys, and F1's harness can loop over all four models in a single run.</p>
+    <p>Then run the ten questions against four configurations and fill in the table:</p>
+<pre><code>hf models list --warm --limit 40
+hf models list --inference-provider groq --warm</code></pre>
+    <div class="tw"><table>
+      <thead><tr><th>Config</th><th>What it selects</th><th>Accuracy</th><th>p50 latency</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td class="num">Qwen3.6-27B:ovhcloud</td><td>today's default — a pinned provider</td><td class="num">— /10</td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td class="num">gpt-oss-120b:fastest</td><td>highest throughput available</td><td class="num">— /10</td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td class="num">gpt-oss-120b:cheapest</td><td>lowest price per output token</td><td class="num">— /10</td><td class="num">—</td><td class="num">—</td></tr>
+        <tr><td class="num">a small model</td><td>is 27B even needed for 16 columns?</td><td class="num">— /10</td><td class="num">—</td><td class="num">—</td></tr>
+      </tbody>
+    </table></div>
+    <p>Two switches already sitting in <code>application.properties</code> change the answer, so have
+    them flip each and re-measure: <code>reasoning-effort=none</code> (the file records 21.7 s with
+    thinking vs 1.2 s without — but does accuracy actually drop?) and
+    <code>temperature=0.0</code> (raise it and watch reproducibility fall apart).</p>
+    <p>Then pool the room's numbers on a whiteboard. The winner is rarely the biggest model, and
+    that slide writes itself from data the attendees generated.</p>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> ✓ eval-driven model selection</span>
+      <span class="chip hot"><b>Better on HF</b> ✓✓ one token, ~20 providers — this comparison is a week of procurement anywhere else</span>
+    </div>
+  </article>
+
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">H2 · demo, not a lab</span><span class="lab-dur">5 min</span>
+      <h3 class="lab-title">Where the data actually lives</h3>
+    </div>
+    <p>An Iceberg catalog knows <em>where</em> your table is; it does not care <em>whose</em> object
+    store that is. Attendees have been proving that since the first load — on a bucket-backed Space
+    the warehouse is on a Hugging Face bucket from the start, so there is nothing to move. Show it
+    rather than build it.</p>
+    <p><strong>Open their own bucket page</strong> at
+    <code>huggingface.co/buckets/&lt;you&gt;/warehouse</code>, expand Iceberg's
+    <code>metadata/</code> and <code>data/</code> directories, and open one Parquet file with
+    <code>pd.read_parquet("hf://buckets/…")</code> — nothing Iceberg-aware in the path. Then say what
+    would be sitting there if MinIO were in the way: <code>&lt;name&gt;.parquet/xl.meta</code>
+    directories that no other tool can read. That contrast is the whole point.</p>
+    <p>This is the warehouse registration their setup click already posted, and it is worth putting on
+    screen because three of its fields are counter-intuitive:</p>
+<pre><code>"storage-profile": {
+  "type": "s3",
+  "bucket": "&lt;your-namespace&gt;",   <span class="c">// the NAMESPACE, not the bucket</span>
+  "key-prefix": "warehouse",      <span class="c">// the bucket name goes here</span>
+  "endpoint": "https://s3.hf.co", <span class="c">// no path - LakeKeeper rejects one</span>
+  "region": "us-east-1",
+  "path-style-access": true,
+  "flavor": "s3-compat",
+  "sts-enabled": false
+}</code></pre>
+    <h3>Four gateway differences that are the actual lesson</h3>
+    <ul>
+      <li><strong>No STS</strong>, so LakeKeeper hands out the access key rather than vending
+      temporary credentials — a two-minute aside on why credential vending exists at all.</li>
+      <li><strong>Path-style addressing is mandatory.</strong> Virtual-host style fails with
+      “could not resolve hostname”, which looks like DNS and isn't.</li>
+      <li><strong>The namespace becomes the S3 bucket.</strong> HF buckets are
+      <code>namespace/bucket</code>, S3 won't take a <code>/</code> in a bucket name, and LakeKeeper
+      won't take a path in the endpoint — so the real bucket name slides down into
+      <code>key-prefix</code>.</li>
+      <li><strong>ListObjectsV2 only</strong>; no versioning, ACLs, <code>UploadPartCopy</code>, or
+      <code>x-amz-meta-*</code>. “S3-compatible” is a spectrum, and reading the compatibility notes
+      before adopting a store is the professional lesson underneath the demo.</li>
+    </ul>
+    <div class="note">
+      <span class="l">Why this stopped being a lab</span>
+      <p>It was a 35-minute exercise while MinIO was the default and moving off it was the exciting
+      part. With bucket-backed Spaces the move happens before anyone arrives, so the payoff changed
+      from <em>watch it move</em> to <em>look where it already is</em>. Keep the recipe below to hand:
+      it is what you would walk through if you ever put attendees back on MinIO, and it is the
+      troubleshooting sheet if someone's bucket setup misbehaves.</p>
+      <p style="margin-top:.55rem"><strong>1. AWS SDK ≥ 2.5x with <code>apache-client</code>
+      declared.</strong> This was the real blocker: Iceberg 1.9.2 on a 2024-era SDK produced a bare
+      <code>403</code> with an empty body. <code>S3FileIO</code> still builds an
+      <code>ApacheHttpClient</code>, and from the 2.5x line that artifact is no longer transitive —
+      omit it and every call dies with <code>ClassNotFoundException</code>.</p>
+      <p style="margin-top:.55rem"><strong>2. The endpoint may not have a path.</strong> LakeKeeper
+      refuses it, so the HF <em>namespace</em> becomes the S3 bucket and the bucket name becomes
+      <code>key-prefix</code>.</p>
+      <p style="margin-top:.55rem"><strong>3. No explicit <code>LOCATION</code>.</strong> With a REST
+      catalog the server places the table; anything else is rejected as an invalid location.</p>
+      <p style="margin-top:.55rem"><strong>4. A token with read <em>and</em> write.</strong> Read
+      alone authenticates perfectly and then refuses every <code>PutObject</code> with a bare
+      <code>AccessDenied … Unknown</code>. <strong>Make the pre-flight a write, not a list.</strong></p>
+    </div>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> ✓ catalog/storage separation is the core Iceberg idea</span>
+      <span class="chip hot"><b>Better on HF</b> ✓✓ the warehouse is a browsable, permissioned Hub page</span>
+    </div>
+  </article>
+
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">A11 · first AI feature</span><span class="lab-dur">30 min</span>
+      <h3 class="lab-title">Don't make me read a table</h3>
+    </div>
+    <p class="guide"><a href="https://claude.ai/code/artifact/5d0a622c-5893-44db-8b9b-8552c7e16b11">Step-by-step build guide &rarr;</a></p>
+    <p>Priya, who builds client decks: <em>“When I ask how prices have moved in Camden I get two
+    hundred rows of numbers. I need the picture. I'm currently rebuilding every one of them in
+    Excel.”</em> Results should render as the right chart automatically.</p>
+    <p><strong>Build</strong> it as constrain-then-ask: compute the <em>shape</em> of the result
+    — column types, cardinality, row count — and let <em>code</em> decide which chart types are
+    legal. A second structured-output call picks one of those and names the axes; code builds the
+    Vega-Lite spec and renders it inline with htmx. A time series becomes a line, one category plus
+    one measure becomes bars, two measures become a scatter.</p>
+    <div class="note">
+      <span class="l">The interesting problem — and the debrief</span>
+      <p>Choosing the chart is easy; <strong>refusing</strong> is hard, and it is where every naive
+      version falls over. More than two dimensions, tens of thousands of rows, or a single scalar
+      should render as a table <em>with a one-line reason</em>, not a broken chart. Push them to
+      compute the result shape first and let the model choose only within what is legal — constrain,
+      then ask. That ordering is the transferable lesson.</p>
+      <p style="margin-top:.55rem">Ask the room: <strong>“what happens when the query returns one
+      number?”</strong> Most teams won't have handled it, and a giant single-bar chart in a client
+      deck is worse than a table.</p>
+    </div>
+    <div class="note">
+      <span class="l">Scope for a 30-minute slot</span>
+      <p>The full ticket is 40 minutes. Drop the <em>“Priya can override the chart type and it
+      sticks”</em> criterion and it lands in 30 — keep chart selection and the refusal path, because
+      the refusal is the part worth debriefing. Visually self-verifying, so nobody sits stuck without
+      knowing it.</p>
+    </div>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> ✓ structured output against a validated schema</span>
+      <span class="chip hot"><b>Better on HF</b> ✓ any Inference Provider model, swapped from the admin page</span>
+    </div>
+  </article>
+
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">H4 · pick one</span><span class="lab-dur">30 min</span>
+      <h3 class="lab-title">Get the ingest off the Space</h3>
+    </div>
+    <p>Stated honestly: <code>Download</code> and <code>Load</code> run <em>inside an HTTP request</em>,
+    on 2 vCPU, with no progress and no retry. One year is tolerable; eleven is not. This is the
+    batch/serving split, and it's an architecture lesson before it's an HF lesson.</p>
+<pre><code>hf jobs uv run ingest.py --with duckdb \
+  -v hf://buckets/&lt;you&gt;/warehouse:/mnt/warehouse \
+  --flavor cpu-performance --timeout 1h
+
+hf jobs logs &lt;job-id&gt; --follow</code></pre>
+    <p>Then right-size it: run the same job on <code>cpu-basic</code> ($0.01/h) and
+    <code>cpu-performance</code> ($1.90/h) and compare wall-clock against total cost. The expensive
+    flavor usually turns out <em>cheaper per job</em> — a counterintuitive result people remember.</p>
+    <p><strong>Stretch:</strong> <code>hf jobs scheduled run '0 6 1 * *'</code> for the monthly Land
+    Registry release, or a Hub webhook that re-fires ingest when the upstream dataset repo changes.</p>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> ✓✓ never do heavy lifting in a request handler</span>
+      <span class="chip hot"><b>Better on HF</b> ✓ no cluster, no scheduler, no IAM — and the volume mount means Job and Space share storage with zero glue</span>
+    </div>
+  </article>
+
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">H3 · pick one</span><span class="lab-dur">25 min</span>
+      <h3 class="lab-title">Publish it — then check whether you needed Spark</h3>
+    </div>
+    <p class="guide"><a href="https://claude.ai/code/artifact/1bb55baa-e526-4420-acd1-a75c91a5541d">Step-by-step build guide &rarr;</a></p>
+    <p>Export the table to Parquet, <code>hf upload --type dataset</code>, write the card. Open the
+    repo page: the <strong>Dataset Viewer and its SQL console are just there</strong>, over data they
+    loaded twenty minutes ago.</p>
+    <p>Then the honest experiment — one question, three engines, timed on one year and then eleven:
+    Spark+Iceberg via the app, DuckDB over the published Parquet (<code>hf datasets sql</code>), and
+    the Hub viewer's console.</p>
+    <p><strong>The crossover is the lesson.</strong> For a single year on one machine DuckDB will
+    very likely win, and saying so out loud buys enormous credibility — the room already suspects it.
+    Spark's case is the eleven-year load, the multi-node future, and Iceberg's snapshots and schema
+    evolution, not the single-node scan. Make that argument with numbers the attendees generated
+    rather than asserting it from a slide.</p>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> ✓✓ knowing when <em>not</em> to reach for Spark is a career skill</span>
+      <span class="chip hot"><b>Better on HF</b> ✓ viewer, SQL console and Xet dedup come free with the upload</span>
+    </div>
+  </article>
+
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">R5 · pick one</span><span class="lab-dur">20 min</span>
+      <h3 class="lab-title">Turn the lakehouse into a tool an agent can call</h3>
+    </div>
+    <p><code>spring-ai-starter-mcp-server-webmvc</code> is already in <code>pom.xml</code> and
+    <strong>completely unused</strong> — nothing in <code>src/</code> mentions MCP. So there's a real,
+    small, satisfying build here: expose <code>describe_table()</code> and <code>run_query(sql)</code>
+    over the Space's existing port, point an agent at
+    <code>https://&lt;you&gt;-big-data-ai.hf.space/mcp</code>, and ask it a question in English.</p>
+    <p>It writes SQL, runs it against their warehouse, and reasons about the result — with F1's
+    guardrail refusing anything that isn't a <code>SELECT</code>. That guardrail is now load-bearing,
+    because the thing writing the SQL is fully autonomous. A Space stops being a demo page and
+    becomes an addressable, permissioned, scale-to-zero tool endpoint.</p>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> ✓✓ MCP is the integration question everyone is being asked right now</span>
+      <span class="chip hot"><b>Better on HF</b> ✓ a Space is a URL with auth and a bill that idles at zero</span>
+    </div>
+  </article>
+
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">H5 · PRO only</span><span class="lab-dur">20 min</span>
+      <h3 class="lab-title">Dev Mode — fix a bug without the rebuild</h3>
+    </div>
+    <p>If most of the room is on PRO, this lands harder, because a Docker Space rebuild is 8–15
+    minutes and Dev Mode skips it entirely. <strong>And this repo isn't Dev Mode compatible yet —
+    making it so is the exercise.</strong> Against the documented requirements the Dockerfile already
+    has a Debian base, <code>/app</code> owned by uid 1000, and <code>curl</code>. It's missing
+    <code>wget</code>, <code>procps</code>, <code>git</code>, <code>git-lfs</code> — and a
+    <code>CMD</code> instruction, since the image only declares <code>ENTRYPOINT</code>.</p>
+    <p>Add the four packages, convert <code>ENTRYPOINT</code> to <code>CMD</code>, push, then
+    <code>hf spaces dev-mode</code> and <code>hf spaces ssh</code>. Edit a prompt in the running
+    container, hit Refresh, see it live — then <code>git push</code> <em>from inside the Space</em>
+    to persist it, because Dev Mode changes are otherwise discarded. Demonstrate that foot-gun
+    deliberately rather than letting someone discover it.</p>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> ✓ container dev-loop hygiene</span>
+      <span class="chip hot"><b>Better on HF</b> ✓ SSH and VS Code straight into a running Space</span>
+    </div>
+  </article>
+
+</div>
+
+<hr class="sep">
+
+<section class="sec" style="margin-top:0">
+  <h2>Presenter prep — a week out, not the night before</h2>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>Task</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td><strong>Get credits onto each attendee's account</strong>, and confirm at least one has landed</td><td>Jobs need a positive credit balance, and so does inference past the free tier. Credits on their own account mean no org, no <code>--namespace</code>, and no <code>X-HF-Bill-To</code>. Budget ~$2 each; $5 is generous.</td></tr>
+            <tr><td class="num">2</td><td><strong>Dry-run H2</strong> end to end</td><td>Most third-party surfaces of any lab. Pin the working <code>storage-profile</code> JSON into the handout.</td></tr>
+      <tr><td class="num">3</td><td>Mirror <code>pp-2015.csv</code> into a <strong>public HF bucket</strong></td><td>Otherwise the whole room hammers one Land Registry origin for 170 MB each. Serving it from HF is faster <em>and</em> demonstrates the point.</td></tr>
+      <tr><td class="num">4</td><td>Have a <strong>pre-built Space per attendee</strong> in reserve</td><td>Plan B if venue egress can't sustain 25 image builds</td></tr>
+      <tr><td class="num">5</td><td>Confirm <strong>PRO</strong> on your own account</td><td>Dev Mode is PRO/Team/Enterprise-gated — it's the alternative finale, not the main one</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>How expensive is a rebuild, actually</h3>
+  <p>Measured today, so these are real rather than guessed:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Build</th><th>Time</th></tr></thead>
+    <tbody>
+      <tr><td><strong>First build</strong> — <code>docker build --no-cache</code>, wall clock</td><td><strong>70 seconds</strong>; 64 s of it is one step, <code>mvn dependency:go-offline</code>. <code>apt-get install postgresql-18</code> was 10 s, everything else under 5 s</td></tr>
+      <tr><td><strong>Subsequent push</strong>, one Java file changed — on Hugging Face</td><td><strong>under 60 seconds</strong>, from this Space's own build logs</td></tr>
+      <tr><td>The same warm rebuild locally</td><td><strong>~5 seconds</strong> — <code>dependency:go-offline</code> CACHED, <code>mvn package</code> 3.1 s, every apt/MinIO/LakeKeeper layer CACHED</td></tr>
+    </tbody>
+  </table></div>
+  <p>Two things make this cheap, and both are already true of the Dockerfile as written. <strong>The
+  layer order is right</strong> — <code>COPY pom.xml</code> and <code>dependency:go-offline</code>
+  come before <code>COPY src</code>, so a source change never re-resolves the Spark dependency tree;
+  that 64-second step is paid once and then cached. And <strong>Hugging Face reuses Docker layers
+  between commits</strong>, so attendees get the warm path from their second push onwards.</p>
+  <div class="note">
+    <span class="l">Recommendation withdrawn</span>
+    <p>An earlier draft of this page told you to publish a prebuilt base image to a registry so
+    attendees' first build would be fast. That was built on an estimate of 8–15 minutes for a cold
+    build — never measured, and wrong by an order of magnitude. <strong>Seventy seconds, once, while
+    you are still doing introductions, needs no optimisation.</strong> Skip it.</p>
+  </div>
+
+  <h3>What it costs you — 25 attendees, 4 hours</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Item</th><th>Basis</th><th>Estimate</th></tr></thead>
+    <tbody>
+      <tr><td>Spaces, if you upgrade at all</td><td class="num">25 × 4 h × ~$0.03/h</td><td class="num">~$3</td></tr>
+      <tr><td>Jobs — H4 on <code>cpu-performance</code></td><td class="num">25 × 15 min × $1.90/h</td><td class="num">~$12</td></tr>
+      <tr><td>Jobs — same work on <code>cpu-upgrade</code></td><td class="num">25 × 15 min × $0.03/h</td><td class="num">~$0.20</td></tr>
+      <tr><td>Inference — Labs 1 &amp; 2</td><td class="num">25 × ~150 calls, small open models</td><td class="num">~$5–15</td></tr>
+      <tr><td>Buckets</td><td class="num">free allowance</td><td class="num">$0</td></tr>
+      <tr><td><strong>Total</strong></td><td></td><td class="num"><strong>≈ $20–40</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p>That number is itself a slide. The whole workshop costs less than lunch for two people, because
+  everything bills by the minute and idles at zero.</p>
+</section>
+
+<section class="sec">
+  <h2>How attendees iterate — push to the Space</h2>
+  <p><strong>The default and documented loop is push-to-deploy.</strong> Edit locally, commit, push,
+  watch the build. Nothing is installed and nothing is downloaded: after the clone, each push is a
+  few kilobytes of diff, and every heavy thing happens on Hugging Face's builders rather than on the
+  venue's wifi.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>Time</th></tr></thead>
+    <tbody>
+      <tr><td><code>git push hf main</code></td><td>seconds — the diff is tiny</td></tr>
+      <tr><td>Build on HF, layers cached</td><td>under 60 s</td></tr>
+      <tr><td>Space restart (Postgres, LakeKeeper, MinIO, then the app)</td><td>~20–40 s</td></tr>
+      <tr><td><strong>Round trip</strong></td><td><strong>about 1½–2 minutes</strong></td></tr>
+    </tbody>
+  </table></div>
+  <p>Slower than a local restart, and completely workable provided the labs are designed around it:</p>
+  <ul>
+    <li><strong>Batch the edit, then push.</strong> Write the whole change and push once; read
+    <code>hf spaces logs --build --follow</code> while it runs.</li>
+    <li><strong>Make the thing you're iterating on a runtime parameter.</strong> Worth more than any
+    deploy trick. F2 is the example: rather than four deploys to try four models, spend the first
+    push making the model a per-request option, then run the whole bake-off with no further deploys.</li>
+    <li><strong>Space variables do not avoid a build.</strong> Measured 2026-09-02:
+    <code>hf spaces variables add</code> puts the Space through <code>RUNNING → RUNNING_BUILDING →
+    RUNNING_APP_STARTING</code> and the build log gains an entry. It takes the cached path and the
+    old container keeps serving throughout, so there's no downtime — but it costs about the same as
+    a push. Use variables because they can't introduce a compile error, not because they're free.</li>
+    <li><strong>Pair up.</strong> Two per Space halves the round trips and gives one person the build
+    log while the other writes code.</li>
+    <li><strong>Dev Mode is the real fix if the room has PRO</strong> — SSH in, edit, Refresh, no
+    rebuild at all.</li>
+  </ul>
+
+  <div class="note">
+    <span class="l">Why not a local loop</span>
+    <p>Running the stack locally needs Docker Desktop, JDK 21 and Maven, and pulls roughly
+    <strong>700 MB per person</strong> — about 220 MB of images (<code>postgres:18-alpine</code>
+    112 MB, <code>minio</code> 55 MB, <code>lakekeeper</code> ~50 MB compressed) plus ~500 MB of
+    Maven dependencies (Spark alone is 350 MB). Across 25 people that's <strong>~17 GB over the venue
+    wifi</strong>. Anyone who wants it should run <code>docker compose pull</code> and
+    <code>mvn dependency:go-offline</code> before they travel.</p>
+  </div>
+
+  <h3>Local development — optional, and for you rather than the room</h3>
+  <p>Verified on Apple Silicon, 2026-09-02. This is how <em>you</em> build the material. Build the
+  jar on the host and mount it into the container — no image rebuild at all. Two variants, and the
+  choice is speed against fidelity:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Loop</th><th>Edit → live</th><th>What it restarts</th></tr></thead>
+    <tbody>
+      <tr><td><strong>compose</strong> + jar mounted into <code>app</code>, then <code>docker compose restart app</code></td><td><strong>~9 s</strong> (6.3 s Maven + 3.1 s restart)</td><td>only the app container — Postgres, MinIO and LakeKeeper keep running untouched</td></tr>
+      <tr><td><strong>single container</strong> + jar mount, then <code>docker restart</code></td><td>~13 s (6.3 s Maven + 6.3 s restart)</td><td>the whole stack — but it is the real Spaces topology, so use it before pushing</td></tr>
+    </tbody>
+  </table></div>
+  <p>For the compose variant, put the mount in a dev-only <code>compose.override.yaml</code> (merged
+  automatically; add it to <code>.gitignore</code>):</p>
+<pre><code>services:
+  app:
+    volumes:
+      - ./target/big-data-ai-0.0.1-SNAPSHOT.jar:/app/app.jar:ro</code></pre>
+  <p>Why only the compose variant can restart just the app: in the single-container image the
+  entrypoint deliberately runs <code>java … &amp;</code> and <code>wait</code>s on it, so it stays
+  PID 1 and can take a final catalog dump on shutdown — killing the JVM there stops the container.
+  Where the app is its own container, process separation is already container separation.</p>
+<pre><code><span class="c"># single-container variant</span>
+docker build -t big-data-ai-app .        <span class="c"># once; ~5 s after the first time</span>
+
+docker run -d --name big-data-ai \
+  -p 7860:7860 -p 8181:8181 -p 9000:9000 -p 9001:9001 \
+  -v "$PWD/data":/data \
+  -v "$PWD/target/big-data-ai-0.0.1-SNAPSHOT.jar":/app/app.jar:ro \
+  --env-file .env big-data-ai-app
+
+mvn -o -q -B -DskipTests package &amp;&amp; docker restart big-data-ai</code></pre>
+  <p>The entrypoint runs <code>java … -jar /app/app.jar</code>, so mounting your jar over that path
+  is the whole trick. Verified by checksum inside the container, and by a template change appearing
+  on the next request. It also sidesteps the endpoint bug below, because the app is back inside the
+  container's network namespace.</p>
+  <p>The alternative — compose services plus <code>mvn spring-boot:run</code> on the host — restarts
+  faster but doesn't exercise the entrypoint, and needs <code>127.0.0.1 minio lakekeeper</code> in
+  <code>/etc/hosts</code> to work at all:</p>
+<pre><code>docker compose up -d lakekeeper   <span class="c"># pulls in db, migrate, minio — not app or trino</span>
+mvn spring-boot:run               <span class="c"># no APP_* overrides needed, given the hosts line</span></code></pre>
+
+  <div class="note">
+    <span class="l">The bug the hosts line avoids — reproduced today</span>
+    <p>The README says to override <code>APP_S3_ENDPOINT=http://localhost:9000</code>. That's right
+    for the app's own S3 client and <strong>wrong for LakeKeeper</strong>, because the same string is
+    embedded in the warehouse definition the app POSTs, and LakeKeeper dials it too.</p>
+    <p>Inside the LakeKeeper container, <code>localhost:9000</code> is <strong>LakeKeeper's own
+    Prometheus metrics endpoint</strong> — its metrics port defaults to 9000, and while the Dockerfile
+    moves it to 9191 for the single-container case, <code>compose.yaml</code> does not. Warehouse
+    validation does an S3 <code>GetObject</code> against it, gets Prometheus text, tries to gunzip it,
+    and returns <code>400 FileDecompressionError: invalid gzip header</code> — which
+    <code>IcebergService.setup()</code> catches and reports as
+    <em>“Warehouse already exists - skipping…”</em>.</p>
+    <p>So Setup claims success, and <code>GET /management/v1/warehouse</code> returns
+    <code>{"warehouses":[]}</code>. The hosts line fixes it with no code change: one string now
+    resolves to MinIO from both vantage points. <strong>The proper fix</strong> is to split
+    <code>app.s3.endpoint</code> from the value handed to the catalog — twenty minutes, and an honest
+    addition to F1's defect list, since the root cause is the same swallowed 400.</p>
+  </div>
+
+  <div class="tw"><table>
+    <thead><tr><th>Check</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td><code>docker build</code> from a clean context</td><td><strong>passes</strong>, exit 0, 1.14 GB image</td></tr>
+      <tr><td>Base image drift</td><td><code>eclipse-temurin:21-jre</code> is now Ubuntu 26.04; <code>postgresql-18</code> (18.6) still in main, so the Dockerfile's assumption holds</td></tr>
+      <tr><td>Pinned tags still published</td><td>MinIO <code>RELEASE.2025-09-07T16-13-09Z</code> ✓ · LakeKeeper <code>v0.13.3</code> ✓ — both arm64</td></tr>
+      <tr><td>Apple Silicon</td><td>builds and runs native <code>aarch64</code>, no emulation</td></tr>
+      <tr><td>Container startup</td><td>app, LakeKeeper and MinIO all answer 200; Spring Boot up ~2 s after the services</td></tr>
+      <tr><td>Setup Environment</td><td>✅ bucket · ✅ bootstrap · ✅ warehouse</td></tr>
+      <tr><td>Load → query</td><td>500-row synthetic year loaded; <code>GROUP BY town</code> returned correct counts</td></tr>
+      <tr><td>Iceberg write path</td><td>Parquet under <code>warehouse/housing/staging/data/</code>, metadata JSON + Avro manifest alongside</td></tr>
+      <tr><td><code>.snapshots</code> metadata table</td><td>readable — bonus lab P1 works as written</td></tr>
+      <tr><td>App from source vs compose services</td><td>starts in ~20 s; bucket ✅ bootstrap ✅, warehouse ✗ — the bug above</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Two incidental findings: the <strong>MCP server is already auto-configuring</strong> at startup
+  (<code>McpServerAutoConfiguration</code> enabling resource, prompt and completion capabilities, with
+  zero tools registered) — so R5 is adding tools to a running server, not standing one up. And a
+  harmless <code>NoProviderFoundException</code> warning means there's no Jakarta Validation provider
+  on the classpath: a lab that adds <code>@Valid</code> will silently do nothing until someone adds
+  <code>spring-boot-starter-validation</code>.</p>
+</section>
+
+<section class="sec">
+  <h2>Risks, and what to do about them</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td>25 simultaneous cold Space builds at 0:15</td><td>Not a real risk — the cold build is 70 s and runs on HF's builders, not the venue's wifi. Done before you finish the intro.</td></tr>
+      <tr><td>Attendees can't run Jobs — no credit balance</td><td>Each attendee runs on their own credit, so a Job fails outright if the grant hasn't landed. Confirm a positive balance on a test account beforehand, not with the room.</td></tr>
+      <tr><td>H2 setup errors that point elsewhere</td><td>Resolved and verified. Four settings must be right; three fail misleadingly. Give attendees the recipe, and make the pre-flight a <code>PutObject</code>, not a <code>ListObjects</code></td></tr>
+      <tr><td>Spark OOM on a Space's 2 vCPU / 16 GB</td><td>One year only in the core path; eleven years belongs in H4, where a Job has the RAM</td></tr>
+      <tr><td>Room finishes early or late</td><td>H4, H3 and R5 are independent — take one, two, or none</td></tr>
+      <tr><td>Land Registry origin slow or down</td><td>Serve the CSV from your own public bucket</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="sec">
+  <h2>Why this set, and not the obvious one</h2>
+  <p>The obvious Hugging Face workshop is <em>fine-tune a model, push it to the Hub, deploy it in a
+  Space</em>. There are a hundred of those, and the people who signed up for a data-engineering
+  session don't want it.</p>
+  <p>This set uses the Hub as <strong>infrastructure for a data platform</strong> — object storage,
+  batch compute, a model router, a publishing surface, an agent endpoint. That's both the less-told
+  story and the one that maps onto the systems these attendees actually run at work. The Iceberg
+  table sitting in an HF bucket is the image they'll describe to a colleague on Monday.</p>
+</section>
+
+</div>

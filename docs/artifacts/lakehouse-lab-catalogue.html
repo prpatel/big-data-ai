@@ -1,0 +1,551 @@
+<title>Lakehouse Lab Catalogue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+
+<style>
+  :root {
+    --ground:#FAF9FC; --surface:#FFFFFF; --sunk:#F1EFF5; --ink:#17141F;
+    --muted:#5A5370; --faint:#837B99; --rule:#E3DFEB;
+    --accent:#C96A05; --accent-soft:#FBEEDC;
+    --time:#5646CE; --time-soft:#EDEAFB;
+    --shadow:0 1px 2px rgba(23,20,31,.05), 0 10px 30px -22px rgba(23,20,31,.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --ink:#EDEAF4;
+      --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+      --accent:#FFB44D; --accent-soft:#2B1E0E;
+      --time:#A594FF; --time-soft:#1D1836;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --ink:#EDEAF4;
+    --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+    --accent:#FFB44D; --accent-soft:#2B1E0E;
+    --time:#A594FF; --time-soft:#1D1836;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.6;
+    margin: 0; -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 64rem; margin: 0 auto; padding: clamp(2rem,5vw,4rem) clamp(1rem,4vw,3rem) 6rem; }
+
+  .masthead { border-bottom: 3px double var(--rule); padding-bottom: 1.8rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(2.3rem, 6vw, 3.7rem); line-height: 1; letter-spacing: -.025em;
+    margin: 0 0 1rem; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.14rem; color: var(--muted); max-width: 40rem; margin: 0; }
+
+  h2 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.85rem;
+    letter-spacing: -.018em; margin: 0 0 .6rem; text-wrap: balance;
+  }
+  .sec { margin-top: 3.8rem; }
+  .sec > p, .sec > ul { max-width: 40rem; }
+  p { margin: 0 0 1rem; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--time); outline-offset: 3px; }
+  strong { font-weight: 600; }
+
+  .track-head {
+    display: flex; align-items: baseline; gap: 1rem; margin: 3.5rem 0 1.4rem;
+    border-top: 2px solid var(--ink); padding-top: 1rem;
+  }
+  .track-head .tk {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--accent); white-space: nowrap;
+  }
+  .track-head h2 { margin: 0; font-size: 1.5rem; }
+
+  code {
+    font-family: "JetBrains Mono", monospace; font-size: .82em;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 3px; padding: .05em .3em;
+  }
+  pre {
+    font-family: "JetBrains Mono", monospace; font-size: .77rem; line-height: 1.65;
+    background: var(--sunk); border: 1px solid var(--rule); border-left: 3px solid var(--time);
+    border-radius: 4px; padding: .85rem 1rem; overflow-x: auto; margin: 0 0 1rem;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: 1em; }
+  pre .c { color: var(--faint); }
+
+  /* lab cards */
+  .lab {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 8px;
+    box-shadow: var(--shadow); padding: 1.5rem 1.6rem; margin-bottom: 1.4rem;
+  }
+  .lab.star { border-color: var(--accent); border-width: 1.5px; }
+  .lab h3 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.38rem;
+    letter-spacing: -.012em; margin: 0 0 .1rem; line-height: 1.18;
+  }
+  .lab h3 .id { color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: .78rem; font-weight: 700; letter-spacing: .08em; display: block; margin-bottom: .3rem; }
+  .lab h3 .star-tag {
+    font-family: "JetBrains Mono", monospace; font-size: .6rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 3px; padding: .15rem .4rem; vertical-align: middle; margin-left: .5rem;
+  }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: .4rem; margin: .75rem 0 1.1rem;
+  }
+  .meta span {
+    font-family: "JetBrains Mono", monospace; font-size: .64rem; letter-spacing: .06em;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 999px;
+    padding: .22rem .6rem; color: var(--muted); white-space: nowrap;
+  }
+  .meta span.lane-c { background: var(--time-soft); border-color: var(--time); color: var(--time); }
+  .meta span.pre { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .lab p { max-width: 44rem; }
+  .lab > *:last-child { margin-bottom: 0; }
+  .kicker {
+    font-family: "JetBrains Mono", monospace; font-size: .64rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--faint); margin: 1.3rem 0 .35rem;
+  }
+
+  /* tables */
+  .tw { overflow-x: auto; margin: 1.2rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; min-width: 24rem; }
+  th, td { text-align: left; padding: .55rem .8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: "JetBrains Mono", monospace; font-size: .63rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); font-weight: 500; border-bottom: 2px solid var(--ink);
+  }
+  td.num { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 4px 4px 0; padding: .85rem 1.1rem; margin: 1.2rem 0; max-width: 44rem;
+  }
+  .note p { margin: 0; font-size: .95rem; }
+  .note .l {
+    font-family: "JetBrains Mono", monospace; font-size: .63rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); display: block; margin-bottom: .3rem;
+  }
+
+  figure {
+    margin: 2rem 0; padding: 1.5rem; background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 8px; box-shadow: var(--shadow); overflow-x: auto;
+  }
+  figure svg { display: block; width: 100%; min-width: 680px; height: auto; color: var(--ink); }
+  figcaption {
+    font-size: .88rem; color: var(--muted); margin-top: 1.1rem; padding-top: .9rem;
+    border-top: 1px solid var(--rule); max-width: 46rem;
+  }
+  .n-plain { fill: var(--surface); stroke: currentColor; stroke-width: 1.3; }
+  .n-key   { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.6; }
+  .n-alt   { fill: var(--time-soft); stroke: var(--time); stroke-width: 1.4; }
+  .s-t  { font-family: "Bricolage Grotesque", sans-serif; font-size: 13px; font-weight: 600; fill: var(--ink); }
+  .s-m  { font-family: "JetBrains Mono", monospace; font-size: 10px; fill: var(--muted); }
+  .s-e  { font-family: "JetBrains Mono", monospace; font-size: 10px; fill: var(--accent); font-weight: 500; }
+  .s-h  { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; letter-spacing: .14em; fill: var(--faint); }
+  .ln { stroke: currentColor; stroke-width: 1.4; fill: none; }
+  .head-a { fill: var(--accent); }
+  .ln-a { stroke: var(--accent); stroke-width: 1.4; fill: none; stroke-dasharray: 5 3; }
+  .rule-l { stroke: var(--rule); stroke-width: 1; }
+
+  ul { margin: 0 0 1rem; padding-left: 1.15rem; max-width: 44rem; }
+  li { margin-bottom: .35rem; }
+  li::marker { color: var(--accent); }
+
+  @media (max-width: 620px) { .track-head { flex-direction: column; gap: .3rem; } }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">Companion to the workshop program</p>
+  <h1>Lakehouse Lab Catalogue</h1>
+  <p class="standfirst">Twelve build-a-feature labs to swap into the optional slot, run as a second
+  session, or hand out as take-home work. Every one of them ships a diff, not a screenshot.</p>
+</header>
+
+<section class="sec">
+  <h2>Two things in the repo make this cheaper than it looks</h2>
+  <ul>
+    <li><code>images/kafka_connect/Dockerfile</code> already installs
+    <strong><code>iceberg/iceberg-kafka-connect:1.9.2</code></strong>, and
+    <code>compose.kafka.yaml</code> already brings up a broker, Schema Registry, Connect and a
+    Redpanda console. The streaming lab is configuration, not plumbing.</li>
+    <li><code>compose.yaml</code> already runs <strong>Trino</strong> on <code>:9999</code> against
+    the same LakeKeeper catalog with vended credentials. The multi-engine lab is a JDBC URL.</li>
+  </ul>
+
+  <h3 class="kicker">Two lanes — decide before you send the prerequisites</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Lane</th><th>Needs</th><th>Labs</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Space lane</strong> — runs entirely on HF</td><td>an HF account</td><td class="num">P1 P2 P3 P4 R2 R1 R3 R4 A11 P15</td></tr>
+      <tr><td><strong>Compose lane</strong> — local Docker</td><td>Docker + ~8 GB free</td><td class="num">P5 · P6</td></tr>
+    </tbody>
+  </table></div>
+  <p>Neither Kafka nor Trino is in the Space image, so those two labs need laptops. The core
+  workshop is deliberately Space-only — discovering this split in the room costs twenty minutes.</p>
+
+  <h3 class="kicker">Picking for the room</h3>
+  <div class="tw"><table>
+    <thead><tr><th>If the room is mostly…</th><th>Run these</th></tr></thead>
+    <tbody>
+      <tr><td>Data / platform engineers</td><td class="num"><strong>P2</strong> · P4 · P3 · P1</td></tr>
+      <tr><td>Application &amp; backend devs</td><td class="num"><strong>R2</strong> · A11 · P6 · P1</td></tr>
+      <tr><td>ML / AI engineers</td><td class="num"><strong>R1</strong> · R2 · R3 · R4</td></tr>
+      <tr><td>Streaming / Kafka people</td><td class="num"><strong>P5</strong>, then P3 to clean up the mess it makes</td></tr>
+      <tr><td>Mixed, and you want one showstopper</td><td class="num"><strong>P2</strong> or <strong>R2</strong></td></tr>
+      <tr><td>A team that lives in an agentic editor</td><td class="num"><strong>P15</strong>, using any other lab as the spec</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="sec">
+  <h2>What unlocks what</h2>
+  <p>The core workshop's F1 is not just a lab, it's a dependency. Four of these bonus labs are
+  scored with the same ten questions — which is what turns each of them from a demo into a result.</p>
+
+  <figure>
+    <svg viewBox="0 0 940 580" role="img" aria-label="Dependency graph. F1's eval harness and guarded executor feed four AI labs — R2 agentic SQL, R1 semantic layer, R3 semantic cache, R4 observability — and R4's production traces loop back to become the next eval set. Separately, P1 time travel is the primitive under P2 write-audit-publish and P4 MERGE; P5 Kafka streaming creates the small-file problem that P3 compaction solves, and core H4 Jobs schedules P3.">
+      <defs>
+        <marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+        </marker>
+        <marker id="ag-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path class="head-a" d="M0,0 L10,5 L0,10 z"></path>
+        </marker>
+      </defs>
+
+      <text class="s-h" x="20" y="44">AI TRACK — WHAT THE EVAL HARNESS MAKES MEASURABLE</text>
+
+      <rect class="n-key" x="20" y="110" width="220" height="82" rx="6"></rect>
+      <text class="s-t" x="130" y="138" text-anchor="middle">F1 · core</text>
+      <text class="s-m" x="130" y="158" text-anchor="middle">10-question eval harness</text>
+      <text class="s-m" x="130" y="175" text-anchor="middle">guarded SELECT-only executor</text>
+
+      <rect class="n-plain" x="400" y="62" width="250" height="48" rx="5"></rect>
+      <text class="s-t" x="414" y="82">R2 · agentic SQL loop</text>
+      <text class="s-m" x="414" y="99">one-shot vs agent, measured</text>
+
+      <rect class="n-plain" x="400" y="130" width="250" height="48" rx="5"></rect>
+      <text class="s-t" x="414" y="150">R1 · semantic layer</text>
+      <text class="s-m" x="414" y="167">'F' is a Flat; London is 33 districts</text>
+
+      <rect class="n-plain" x="400" y="198" width="250" height="48" rx="5"></rect>
+      <text class="s-t" x="414" y="218">R3 · semantic cache</text>
+      <text class="s-m" x="414" y="235">skip the LLM on a near-hit</text>
+
+      <rect class="n-plain" x="400" y="266" width="250" height="48" rx="5"></rect>
+      <text class="s-t" x="414" y="286">R4 · query observability</text>
+      <text class="s-m" x="414" y="303">every call traced to an Iceberg table</text>
+
+      <path class="ln" d="M240,151 H330 V86 H392" marker-end="url(#ag)"></path>
+      <path class="ln" d="M240,151 H330 V154 H392" marker-end="url(#ag)"></path>
+      <path class="ln" d="M240,151 H330 V222 H392" marker-end="url(#ag)"></path>
+      <path class="ln" d="M240,151 H330 V290 H392" marker-end="url(#ag)"></path>
+      <text class="s-e" x="338" y="330">all four scored by the same ten questions</text>
+
+      <path class="ln-a" d="M650,290 H700 V26 H130 V102" marker-end="url(#ag-a)"></path>
+      <text class="s-e" x="415" y="20" text-anchor="middle">traces become next month's eval set</text>
+
+      <line class="rule-l" x1="20" y1="356" x2="920" y2="356"></line>
+      <text class="s-h" x="20" y="384">DATA-ENGINEERING TRACK — THE ICEBERG CHAIN</text>
+
+      <rect class="n-key" x="20" y="410" width="220" height="48" rx="5"></rect>
+      <text class="s-t" x="130" y="430" text-anchor="middle">P1 · time travel</text>
+      <text class="s-m" x="130" y="447" text-anchor="middle">snapshots · rollback</text>
+
+      <rect class="n-plain" x="340" y="378" width="230" height="48" rx="5"></rect>
+      <text class="s-t" x="354" y="398">P2 · write–audit–publish</text>
+      <text class="s-m" x="354" y="415">branch · assert · fast-forward</text>
+
+      <rect class="n-plain" x="340" y="448" width="230" height="48" rx="5"></rect>
+      <text class="s-t" x="354" y="468">P4 · MERGE / CDC</text>
+      <text class="s-m" x="354" y="485">idempotent ingestion</text>
+
+      <rect class="n-plain" x="670" y="410" width="250" height="48" rx="5"></rect>
+      <text class="s-t" x="684" y="430">P3 · compaction + retention</text>
+      <text class="s-m" x="684" y="447">and the time-travel tradeoff</text>
+
+      <rect class="n-alt" x="670" y="510" width="250" height="48" rx="5"></rect>
+      <text class="s-t" x="684" y="530">P5 · Kafka → Iceberg</text>
+      <text class="s-m" x="684" y="547">compose lane</text>
+
+      <rect class="n-plain" x="20" y="510" width="220" height="48" rx="5"></rect>
+      <text class="s-t" x="130" y="530" text-anchor="middle">Core H4 · Jobs</text>
+      <text class="s-m" x="130" y="547" text-anchor="middle">per-minute batch compute</text>
+
+      <path class="ln" d="M240,434 H300 V402 H332" marker-end="url(#ag)"></path>
+      <path class="ln" d="M240,434 H300 V472 H332" marker-end="url(#ag)"></path>
+      <path class="ln" d="M795,510 V466" marker-end="url(#ag)"></path>
+      <text class="s-e" x="785" y="486" text-anchor="end">creates the small-file problem</text>
+      <path class="ln" d="M240,534 H610 V434 H662" marker-end="url(#ag)"></path>
+      <text class="s-e" x="420" y="528" text-anchor="middle">schedule it on a cron</text>
+    </svg>
+    <figcaption>The dashed edge is the one worth designing for: <strong>R4</strong> writes every
+    production question, its SQL and its outcome to a table, so the questions that failed in the wild
+    become the next version of the eval set that <strong>F1</strong> started. That loop is the
+    thing senior engineers in the room will want to copy.</figcaption>
+  </figure>
+</section>
+
+<!-- TRACK A -->
+<div class="track-head"><span class="tk">Track A</span><h2>Iceberg internals</h2></div>
+
+<article class="lab">
+  <h3><span class="id">P1</span>Time travel and a snapshot diff view</h3>
+  <div class="meta"><span>45 min</span><span>medium</span><span>Space lane</span></div>
+  <p><strong>Build</strong> a <code>/history</code> page listing every snapshot, and a query page
+  that can run against any of them. Iceberg's metadata tables are just SQL, which makes this far less
+  work than it sounds:</p>
+<pre><code>SELECT * FROM lakekeeper.housing.staging_prices.snapshots;
+SELECT * FROM lakekeeper.housing.staging_prices.files;
+
+SELECT town, avg(price) FROM lakekeeper.housing.staging_prices
+  VERSION AS OF 7834659812345678901 GROUP BY town;</code></pre>
+  <p>The payoff is that everyone double-loads 2015 — <code>load()</code> appends — and then fixes it
+  in one statement instead of reloading:</p>
+<pre><code>CALL lakekeeper.system.rollback_to_snapshot('housing.staging_prices', &lt;snapshot_id&gt;);</code></pre>
+  <p class="kicker">Concepts</p>
+  <p>Snapshot isolation; metadata tables as a first-class API; why “undo” is cheap in a table format
+  and terrifying in a warehouse.</p>
+</article>
+
+<article class="lab star">
+  <h3><span class="id">P2</span>Write–audit–publish with branches <span class="star-tag">showstopper</span></h3>
+  <div class="meta"><span>50 min</span><span>hard</span><span>Space lane</span></div>
+  <p><strong>Build</strong> ingestion that <em>cannot</em> publish bad data, using branches as a
+  staging area that costs nothing. Change <code>load()</code> to write into a branch, audit it, and
+  only then fast-forward <code>main</code>:</p>
+<pre><code>ALTER TABLE lakekeeper.housing.staging_prices CREATE BRANCH ingest_2016;
+<span class="c">-- write with spark.wap.branch=ingest_2016, then assert:</span>
+<span class="c">--   no null transaction_id · price &gt; 0 · dates inside the year</span>
+<span class="c">--   row count within ±20% of last year · record_status in (A,C,D)</span>
+CALL lakekeeper.system.fast_forward('housing.staging_prices','main','ingest_2016');</code></pre>
+  <p>An <code>AuditService</code> with those five assertions, and a PASS/FAIL panel with
+  <strong>Publish</strong> and <strong>Discard</strong> buttons, is the whole build.</p>
+  <p class="kicker">Why it lands</p>
+  <p>Nobody querying <code>main</code> ever sees a partial or failed batch — a property most people's
+  production pipelines don't have, achieved in an afternoon with no staging table, no second bucket,
+  and no copy of the data. Deliberately corrupt a CSV row, watch the audit fail, watch
+  <code>main</code> stay clean. Best five seconds of the day.</p>
+  <p class="kicker">Concepts</p>
+  <p>Branching and tagging; atomic multi-file commits; why data-quality gates belong <em>inside</em>
+  the table rather than in an orchestrator.</p>
+</article>
+
+<article class="lab">
+  <h3><span class="id">P3</span>Compaction, and the economics of file size</h3>
+  <div class="meta"><span>40 min</span><span>medium</span><span>Space lane</span><span class="pre">pairs with P5 or Core H4</span></div>
+  <p><strong>Build</strong> a Maintenance panel, plus the measurements that justify it — file count,
+  total size and query latency before and after each operation.</p>
+<pre><code>CALL lakekeeper.system.rewrite_data_files(
+  table =&gt; 'housing.staging_prices',
+  strategy =&gt; 'sort', sort_order =&gt; 'town ASC, date_of_transfer ASC');
+CALL lakekeeper.system.expire_snapshots(...);
+CALL lakekeeper.system.remove_orphan_files(...);
+
+ALTER TABLE lakekeeper.housing.staging_prices ADD PARTITION FIELD years(date_of_transfer);</code></pre>
+  <p>That last one surprises people: metadata-only, no data rewritten, old files keep their old
+  layout and still read correctly. Have them prove it by counting files scanned before and after.</p>
+  <p class="kicker">Concepts</p>
+  <p>The small-file problem; sort orders and Z-ordering as pruning strategy; hidden partitioning; and
+  the tension worth arguing about — <strong><code>expire_snapshots</code> destroys the time travel
+  from P1.</strong> Retention is a policy decision, not a default.</p>
+</article>
+
+<article class="lab">
+  <h3><span class="id">P4</span>MERGE, and making <code>record_status</code> mean something</h3>
+  <div class="meta"><span>45 min</span><span>medium-hard</span><span>Space lane</span></div>
+  <p><strong>Build</strong> idempotent ingestion — fixing a real defect, since loading the same year
+  twice currently doubles the rows and nothing prevents it.</p>
+<pre><code>MERGE INTO lakekeeper.housing.prices t USING staged_batch s
+ON t.transaction_id = s.transaction_id
+WHEN MATCHED AND s.record_status = 'D' THEN DELETE
+WHEN MATCHED THEN UPDATE SET *
+WHEN NOT MATCHED THEN INSERT *;</code></pre>
+  <p>The Land Registry's <code>record_status</code> column (<code>A</code> add / <code>C</code>
+  change / <code>D</code> delete) has been sitting unused in the schema all day — the monthly change
+  files are genuine CDC, and this is where the column finally earns its place. Then flip
+  <code>write.delete.mode</code> to <code>merge-on-read</code> and measure both sides.</p>
+  <p class="kicker">Concepts</p>
+  <p>Copy-on-write vs merge-on-read as write amplification against read amplification, with numbers
+  they generated; idempotency as a design property; delete files and how compaction reclaims them.</p>
+</article>
+
+<!-- TRACK B -->
+<div class="track-head"><span class="tk">Track B</span><h2>Streaming</h2></div>
+
+<article class="lab">
+  <h3><span class="id">P5</span>Kafka → Iceberg, live</h3>
+  <div class="meta"><span>60 min</span><span>hard</span><span class="lane-c">compose lane · needs Docker</span></div>
+  <p><strong>Build</strong> a streaming ingest path into the same table people have been querying all
+  day. The connector is already installed in the repo's Connect image, so the work is:</p>
+  <ul>
+    <li>a <code>/admin/simulate</code> endpoint producing synthetic transactions on the existing
+    16-column schema</li>
+    <li>a connector config POSTed to Connect on <code>:8083</code> — Iceberg sink, REST catalog,
+    <code>iceberg.tables=housing.staging_prices</code>, and a commit interval they get to tune</li>
+    <li>the query page left open, row counts climbing, <strong>queries still returning</strong></li>
+  </ul>
+  <p class="kicker">Concepts</p>
+  <p>The commit interval as the latency/file-size dial — drop it to one second and watch P3's
+  small-file problem appear in real time, which is the lab's best moment; exactly-once via the
+  connector's control topic; readers never blocked by writers, the property that makes a table
+  format viable for streaming at all.</p>
+  <p><strong>Stretch:</strong> two connectors writing the same table concurrently. Optimistic
+  concurrency handles it — make them find the retry in the logs.</p>
+</article>
+
+<!-- TRACK C -->
+<div class="track-head"><span class="tk">Track C</span><h2>Open format, many engines</h2></div>
+
+<article class="lab">
+  <h3><span class="id">P6</span>One table, three engines</h3>
+  <div class="meta"><span>35 min</span><span>easy-medium</span><span class="lane-c">compose lane · needs Docker</span></div>
+  <p><strong>Build</strong> a <code>/compare</code> page that runs the same SQL through Spark and
+  Trino and shows both result sets and both timings. Trino is already pointed at the same catalog
+  with vended credentials, so this is a JDBC driver and a diff.</p>
+  <p>Then the moment that makes the point: <strong>write from Spark while Trino is connected</strong>
+  and re-run the Trino query. New snapshot, immediately — no cache invalidation, no catalog
+  reconfiguration, no export.</p>
+  <p class="kicker">Concepts</p>
+  <p>What “open table format” actually buys: engine per workload, zero copies, no lock-in. This is
+  the lab for a room that suspects lakehouse is a marketing word.</p>
+</article>
+
+<!-- TRACK D -->
+<div class="track-head"><span class="tk">Track D</span><h2>AI engineering</h2></div>
+
+<article class="lab star">
+  <h3><span class="id">R2</span>From one-shot generation to an agentic loop <span class="star-tag">showstopper</span></h3>
+  <div class="meta"><span>50 min</span><span>medium-hard</span><span>Space lane</span><span class="pre">needs F1</span></div>
+  <p><strong>Build</strong> a tool-calling agent that explores the schema before it writes anything.
+  Spring AI 2.0 is already on the classpath and does this declaratively — <code>@Tool</code> methods
+  registered with <code>.defaultTools(…)</code>, where local tools and remote MCP tools share one
+  <code>ToolCallback</code> interface, so anything built here also works through R5's MCP endpoint.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Tool</th><th>Why the model needs it</th></tr></thead>
+    <tbody>
+      <tr><td class="num">listTables()</td><td>stop hardcoding the table name</td></tr>
+      <tr><td class="num">describeTable(name)</td><td>the live schema, not a string constant that rots</td></tr>
+      <tr><td class="num">sampleValues(col, n)</td><td>discovers <code>property_type</code> is <code>D/S/T/F/O</code>, not <code>"Flat"</code></td></tr>
+      <tr><td class="num">runSql(sql)</td><td><strong>F1's guarded, LIMIT-capped executor</strong></td></tr>
+      <tr><td class="num">explain(sql)</td><td>check the plan before running something expensive</td></tr>
+    </tbody>
+  </table></div>
+  <p>The loop is explore → write → execute → <strong>read the error</strong> → fix → answer. Make
+  them deliberately break a query and watch the model recover.</p>
+  <p class="kicker">Then measure it</p>
+  <p>Run F1's ten questions against one-shot and agentic, and fill in accuracy, p50 latency and
+  tokens per question. Accuracy usually jumps; latency and cost usually go up three to five times.
+  <strong>That table is the lab</strong> — “should this be an agent?” becomes a question with an
+  answer instead of a preference.</p>
+</article>
+
+<article class="lab">
+  <h3><span class="id">R1</span>The semantic layer, or: why text-to-SQL actually fails</h3>
+  <div class="meta"><span>45 min</span><span>medium</span><span>Space lane</span><span class="pre">needs F1</span></div>
+  <p>Ask the current app <em>“how many flats sold in London last year?”</em> and it fails twice, for
+  reasons that have nothing to do with model quality: <code>property_type</code> is <code>'F'</code>,
+  and “London” is a <code>town</code> value <em>and</em> 33 <code>district</code> values, with the
+  right answer depending on which was meant.</p>
+  <p><strong>Build</strong> three things: a YAML data dictionary of coded columns and synonyms; a
+  distinct-value index over <code>town</code>/<code>district</code>/<code>county</code> embedded
+  through HF Inference Providers (feature extraction is served by <code>hf-inference</code>,
+  Scaleway and Together); and entity resolution at query time that hands the model resolved literals
+  plus a disambiguation note.</p>
+  <p class="kicker">Why it lands</p>
+  <p>Measured on F1's harness, this routinely moves accuracy more than any model upgrade from the
+  F2 bake-off — a genuinely useful and slightly deflating finding for a room that just spent
+  thirty minutes shopping for models. Most text-to-SQL failure is a data-modeling problem wearing an
+  AI costume.</p>
+</article>
+
+<article class="lab">
+  <h3><span class="id">R3</span>Semantic query cache</h3>
+  <div class="meta"><span>35 min</span><span>medium</span><span>Space lane</span><span class="pre">pairs with R1</span></div>
+  <p><strong>Build</strong> an embedding cache over incoming questions: on a close enough match,
+  reuse the <strong>SQL</strong> — never the results, because the data moves — and skip the LLM
+  entirely. Report hit rate, latency saved and cost saved.</p>
+  <p class="kicker">The lab is the failure mode</p>
+  <p><em>“Average price in Camden in 2015”</em> and <em>“…in 2016”</em> embed almost identically, and
+  the naive cache returns confidently wrong SQL. The fix is normalizing entities and literals out of
+  the question before embedding — exactly the machinery R1 built. Ship the naive version first, watch
+  it break, then fix it. Nobody forgets a cache that lied to them.</p>
+  <p class="kicker">Concepts</p>
+  <p>Embeddings for retrieval rather than generation; similarity thresholds as tunable risk; caching
+  a <em>plan</em> not a <em>result</em>; a cache key must contain everything that changes the answer.</p>
+</article>
+
+<article class="lab">
+  <h3><span class="id">R4</span>Query observability, published as a dataset</h3>
+  <div class="meta"><span>40 min</span><span>medium</span><span>Space lane</span><span class="pre">needs F1</span></div>
+  <p><strong>Build</strong> end-to-end instrumentation: model id, provider, tokens, latency, the
+  generated SQL, whether it parsed, whether it executed, rows returned, and Iceberg's own scan
+  metrics (files scanned, bytes read). Write the traces <strong>to an Iceberg table</strong> — the
+  app dogfooding its own warehouse — then publish it as an HF dataset repo so the Viewer and DuckDB
+  console work over it for free.</p>
+  <p class="kicker">The loop that closes</p>
+  <p>Production traces become next month's eval set; questions that failed become test cases. Scan
+  metrics are also the bridge between “the query was slow” and “the table needs P3”.</p>
+</article>
+
+<article class="lab">
+  <h3><span class="id">A11</span>Question → SQL → chart</h3>
+  <div class="meta"><span>30 min</span><span>easy-medium</span><span>Space lane</span><span class="pre">good closer</span></div>
+  <p><strong>Build</strong> the shape check in code, then a second structured-output call that
+  picks a chart type from the ones code allowed and names the axes; code builds the Vega-Lite spec
+  and renders it inline with htmx.</p>
+  <p>The interesting constraint is that the model must reason about <em>result shape</em> — one
+  numeric grouped by one categorical is a bar; a date series is a line; forty thousand rows are a
+  table and nothing else. Getting it to <em>refuse</em> to chart is harder than getting it to chart.</p>
+  <p class="kicker">Why it's here</p>
+  <p>It's the most screenshot-able thing anyone will build all day, and short enough to finish.
+  Sometimes that's the right lab.</p>
+</article>
+
+<!-- TRACK E -->
+<div class="track-head"><span class="tk">Track E</span><h2>Working with an agent</h2></div>
+
+<article class="lab">
+  <h3><span class="id">P15</span>Drive a coding agent through an unfamiliar Java codebase</h3>
+  <div class="meta"><span>40 min</span><span>any level</span><span>Space lane</span></div>
+  <p><strong>Build</strong> any other lab here — but with an agentic editor, where the real subject
+  is how you drive it. P1 and A11 make the best specs: self-contained and visually verifiable.</p>
+  <ul>
+    <li>Write an <code>AGENTS.md</code> for this repo <em>first</em> — where the Spark session is
+    configured, that Thymeleaf fragments return <code>template :: fragment</code>, that admin
+    endpoints are htmx <code>POST</code>s, that Iceberg procedures live under
+    <code>&lt;catalog&gt;.system.*</code>. Fifteen minutes here saves an hour.</li>
+    <li><strong>Give the agent F1's eval harness as its feedback loop</strong>, so it checks its
+    own work instead of asking. This is the biggest single difference between agent runs that
+    converge and agent runs that wander.</li>
+    <li>Constrain the diff — one endpoint, one template, no refactors — and review it properly.</li>
+  </ul>
+  <p class="kicker">Then compare across the room</p>
+  <p>Who finished, what the agent got wrong, and where it confidently invented an Iceberg procedure
+  name that doesn't exist. Version-specific API surface is where these tools reliably fail, and
+  watching it happen live teaches verification better than any warning slide.</p>
+</article>
+
+<section class="sec">
+  <h2>Reality check on timing</h2>
+  <div class="note">
+    <span class="l">Ship a starter branch per lab</span>
+    <p>These durations assume attendees write real code and hit real errors. If the room is mixed in
+    experience, hand out a branch with interfaces stubbed, tests written and the implementation
+    removed. Nobody learns anything from the twenty minutes spent finding where to add a controller
+    method — and the confident half of the room will finish the stretch goals anyway.</p>
+  </div>
+</section>
+
+</div>

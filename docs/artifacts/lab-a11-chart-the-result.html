@@ -1,0 +1,449 @@
+<title>A11 · Chart the Result</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+
+<style>
+  :root {
+    --ground:#FAF9FC; --surface:#FFFFFF; --sunk:#F1EFF5; --term:#F4F2F8;
+    --ink:#17141F; --muted:#5A5370; --faint:#837B99; --rule:#E3DFEB;
+    --accent:#C96A05; --accent-soft:#FBEEDC;
+    --code:#5646CE; --code-soft:#EDEAFB;
+    --pass:#1F6B4A; --pass-soft:#DFF0E7;
+    --fail:#A3341F; --fail-soft:#F8E4DF;
+    --shadow:0 1px 2px rgba(23,20,31,.05), 0 10px 30px -22px rgba(23,20,31,.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --term:#0A0810;
+      --ink:#EDEAF4; --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+      --accent:#FFB44D; --accent-soft:#2B1E0E;
+      --code:#A594FF; --code-soft:#1D1836;
+      --pass:#5FC492; --pass-soft:#10241B;
+      --fail:#F08A6E; --fail-soft:#2B1310;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --term:#0A0810;
+    --ink:#EDEAF4; --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+    --accent:#FFB44D; --accent-soft:#2B1E0E;
+    --code:#A594FF; --code-soft:#1D1836;
+    --pass:#5FC492; --pass-soft:#10241B;
+    --fail:#F08A6E; --fail-soft:#2B1310;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); margin: 0;
+    font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 58rem; margin: 0 auto; padding: clamp(2rem,5vw,3.5rem) clamp(1rem,4vw,2.5rem) 6rem; }
+
+  .masthead { border-bottom: 3px double var(--rule); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 .8rem;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(2rem,5vw,3rem); line-height: 1.02; letter-spacing: -.025em;
+    margin: 0 0 .8rem; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.08rem; color: var(--muted); max-width: 40rem; margin: 0; }
+
+  p { margin: 0 0 1rem; max-width: 44rem; }
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--code); outline-offset: 3px; }
+
+  code {
+    font-family: "JetBrains Mono", monospace; font-size: .82em;
+    background: var(--code-soft); color: var(--code);
+    border-radius: 3px; padding: .08em .32em;
+  }
+  pre {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; line-height: 1.65;
+    background: var(--term); border: 1px solid var(--rule); border-left: 3px solid var(--code);
+    border-radius: 4px; padding: .85rem 1rem; overflow-x: auto; margin: 0 0 1rem;
+    color: var(--ink);
+  }
+  pre code { background: none; color: inherit; padding: 0; font-size: 1em; }
+  pre .c { color: var(--faint); }
+
+  /* part headings */
+  .part {
+    display: flex; align-items: baseline; gap: .9rem; flex-wrap: wrap;
+    margin: 3.5rem 0 .4rem; border-top: 2px solid var(--ink); padding-top: 1rem;
+  }
+  .part .n {
+    font-family: "JetBrains Mono", monospace; font-size: .7rem; font-weight: 700;
+    letter-spacing: .18em; color: var(--accent); text-transform: uppercase;
+  }
+  .part h2 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.55rem;
+    letter-spacing: -.018em; margin: 0; text-wrap: balance;
+  }
+  .part .mins {
+    font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--faint);
+    margin-left: auto;
+  }
+  .part + p { margin-top: .9rem; }
+
+  /* a numbered step */
+  .step { display: grid; grid-template-columns: 3.2rem 1fr; gap: 0 1rem; margin: 1.8rem 0; }
+  .step > .sn {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; font-weight: 700;
+    color: var(--accent); padding-top: .18rem; letter-spacing: .04em;
+  }
+  .step > .sb > :last-child { margin-bottom: 0; }
+  .step h3 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.08rem;
+    margin: 0 0 .5rem; letter-spacing: -.008em; line-height: 1.3;
+  }
+  @media (max-width: 34rem) { .step { grid-template-columns: 1fr; gap: .3rem; } }
+
+  /* boxes */
+  .box { border-radius: 0 5px 5px 0; padding: .85rem 1.05rem; margin: 1rem 0; max-width: 44rem; }
+  .box p:last-child { margin-bottom: 0; }
+  .box .l {
+    font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .14em;
+    text-transform: uppercase; display: block; margin-bottom: .4rem; font-weight: 700;
+  }
+  .task   { background: var(--accent-soft); border-left: 3px solid var(--accent); }
+  .task .l   { color: var(--accent); }
+  .think  { background: var(--code-soft); border-left: 3px solid var(--code); }
+  .think .l  { color: var(--code); }
+  .warn   { background: var(--fail-soft); border-left: 3px solid var(--fail); }
+  .warn .l   { color: var(--fail); }
+
+  .think ol { margin: .3rem 0 0; padding-left: 1.15rem; }
+  .think li { margin-bottom: .55rem; }
+  .think li:last-child { margin-bottom: 0; }
+  .task ul { margin: .3rem 0 0; padding-left: 1.15rem; }
+  .task li { margin-bottom: .35rem; }
+
+  /* tables */
+  .tw { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; min-width: 22rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: "JetBrains Mono", monospace; font-size: .61rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); font-weight: 500;
+    border-bottom: 2px solid var(--ink); white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td code { font-size: .78rem; }
+  td.n { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--faint); }
+
+  .v {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; font-weight: 700;
+    letter-spacing: .08em; padding: .15rem .45rem; border-radius: 3px; white-space: nowrap;
+  }
+  .v-run  { background: var(--fail-soft); color: var(--fail); border: 1px solid var(--fail); }
+  .v-stop { background: var(--pass-soft); color: var(--pass); border: 1px solid var(--pass); }
+  .v-none { background: var(--sunk); color: var(--faint); border: 1px solid var(--rule); }
+
+  .file {
+    font-family: "JetBrains Mono", monospace; font-size: .74rem;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 4px;
+    padding: .5rem .7rem; margin: 0 0 .8rem; display: block; color: var(--muted);
+    overflow-x: auto; white-space: nowrap;
+  }
+  .file b { color: var(--ink); font-weight: 700; }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">Lab A11 · Meridian ticket · 40 minutes · you write the code</p>
+  <h1>Don't make me read a table</h1>
+  <p class="standfirst">Make results render as the right chart automatically — and, harder, make the
+  tool <em>refuse</em> to chart the things it shouldn't.</p>
+</header>
+
+<div class="box think">
+  <span class="l">The ticket · Priya, who builds client decks</span>
+  <p><em>"When I ask how prices have moved in Camden I get two hundred rows of numbers. I need the
+  picture. I'm pasting these into client decks and I'm currently rebuilding every one of them in
+  Excel."</em></p>
+</div>
+
+<p><strong>This is a build lab.</strong> You write code, push, and check it on your Space. It assumes
+F1 — you will reuse the structured-output pattern from <code>SqlAnswer</code>.</p>
+
+<div class="box warn">
+  <span class="l">Read this before you start, it is the whole lab</span>
+  <p><strong>Choosing a chart is easy. Refusing is hard</strong>, and it is where every naive version
+  of this falls over. The decision is a function of the <em>result shape</em> — how many columns, of
+  what types, how many rows — <strong>not</strong> of the question.</p>
+  <p style="margin-top:.55rem">So the order matters: <strong>compute the shape first, then let the
+  model choose only within what is already legal.</strong> Constrain, then ask. If you ask the model
+  to decide freely you will get a pie chart of two hundred towns.</p>
+</div>
+
+<div class="part"><span class="n">Part 1</span><h2>See the problem</h2><span class="mins">5 min</span></div>
+
+<div class="step">
+  <div class="sn">1.1</div>
+  <div class="sb">
+    <h3>Produce the thing Priya is complaining about</h3>
+    <p>In the app, ask: <em>"average price by month in Camden in 2015"</em>. Run it. You get a
+    text table. Now imagine pasting that into a deck.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">1.2</div>
+  <div class="sb">
+    <h3>Now produce the things that must NOT be charted</h3>
+    <p>Run each of these and keep them — they are your test cases for Part 4:</p>
+    <div class="tw"><table>
+      <thead><tr><th>Ask for</th><th>Shape</th><th>Should be</th></tr></thead>
+      <tbody>
+        <tr><td>average price by month in Camden</td><td>date + measure</td><td><span class="v v-stop">line</span></td></tr>
+        <tr><td>average price by property type</td><td>category + measure</td><td><span class="v v-stop">bars</span></td></tr>
+        <tr><td>how many sales in total</td><td>one row, one number</td><td><span class="v v-run">table</span></td></tr>
+        <tr><td>every sale in Camden</td><td>thousands of rows, 16 cols</td><td><span class="v v-run">table</span></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 2</span><h2>Compute the shape</h2><span class="mins">10 min</span></div>
+
+<div class="step">
+  <div class="sn">2.1</div>
+  <div class="sb">
+    <h3>Create the record</h3>
+    <span class="file">new file · src/main/java/dev/prpatel/iceberg/app/<b>ResultShape.java</b></span>
+<pre><code>public record ResultShape(
+        long rowCount,
+        List&lt;String&gt; columns,
+        List&lt;String&gt; types,        <span class="c">// spark type names: date, string, int, double…</span>
+        int categoryColumns,       <span class="c">// string columns</span>
+        int measureColumns,        <span class="c">// numeric columns</span>
+        boolean hasTemporal) {     <span class="c">// any date/timestamp column</span>
+
+    <span class="c">/** What this shape is allowed to become. Computed, never asked. */</span>
+    public List&lt;String&gt; allowedCharts() {
+        if (rowCount &lt;= 1 || rowCount &gt; 5000) return List.of();
+        if (columns.size() &gt; 3)               return List.of();
+        <span class="c">// TODO: line when hasTemporal && measureColumns >= 1</span>
+        <span class="c">// TODO: bar  when categoryColumns == 1 && measureColumns == 1</span>
+        <span class="c">// TODO: scatter when measureColumns >= 2</span>
+        return List.of();
+    }
+}</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">2.2</div>
+  <div class="sb">
+    <h3>Fill it from the Dataset</h3>
+    <p>Spark hands you everything you need. In <code>HomeController.runquery</code>, after
+    <code>spark.sql(...)</code> at line 69, you have <code>resultsDF</code>:</p>
+<pre><code>resultsDF.schema().fields()   <span class="c">// name + dataType per column</span>
+resultsDF.count()             <span class="c">// but see the warning</span></code></pre>
+    <div class="box warn">
+      <span class="l">Do not call count() on an uncapped result</span>
+      <p>F1 part 2 was about exactly this. The guard already applied a <code>LIMIT</code>, so count
+      the rows you actually took — <code>takeAsList</code> gives you them — rather than scanning the
+      table again to find out how many there were.</p>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">2.3</div>
+  <div class="sb">
+    <h3>Check it before going further</h3>
+    <p>Log the shape and run your four test queries from 1.2. <strong>Do not move on until
+    <code>allowedCharts()</code> returns empty for the scalar and the thousand-row cases.</strong>
+    Getting the refusal right first is the point; charting is the easy half.</p>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 3</span><h2>Ask the model — inside the constraint</h2><span class="mins">10 min</span></div>
+
+<div class="step">
+  <div class="sn">3.1</div>
+  <div class="sb">
+    <h3>A record for the answer, exactly like SqlAnswer</h3>
+    <span class="file">new file · src/main/java/dev/prpatel/iceberg/app/<b>ChartChoice.java</b></span>
+<pre><code>public record ChartChoice(String chartType, String xColumn, String yColumn, String title) {}</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">3.2</div>
+  <div class="sb">
+    <h3>Add the call to AiService</h3>
+    <p>Copy the shape of <code>generateAnswer</code> — same client, same strict parse, same
+    "no repairs in code" rule. The prompt is the interesting part:</p>
+    <div class="box task">
+      <span class="l">The prompt must not offer a free choice</span>
+      <ul>
+        <li>Give it the <strong>column names and types</strong>, and the row count</li>
+        <li>Give it <strong>only the chart types <code>allowedCharts()</code> returned</strong> —
+        not the full menu</li>
+        <li>Ask for JSON in the <code>ChartChoice</code> shape, nothing else</li>
+        <li><strong>Never call this when <code>allowedCharts()</code> is empty.</strong> If nothing
+        is legal there is nothing to ask, and asking anyway is how you get the pie chart</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">3.3</div>
+  <div class="sb">
+    <h3>Validate what comes back</h3>
+    <p>The model can still name a column that is not in the result, or a chart type you did not
+    offer. <strong>Check both against the shape before rendering</strong> — this is the same idea as
+    <code>columns_used</code> in F1: ask for fields you can verify.</p>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 4</span><h2>Render it, or say why not</h2><span class="mins">10 min</span></div>
+
+<div class="step">
+  <div class="sn">4.1</div>
+  <div class="sb">
+    <h3>Add Vega-Lite to the page</h3>
+    <span class="file">src/main/resources/templates/<b>index.html</b> · beside the htmx script</span>
+<pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/vega@5"&gt;&lt;/script&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/vega-lite@5"&gt;&lt;/script&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/vega-embed@6"&gt;&lt;/script&gt;</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">4.2</div>
+  <div class="sb">
+    <h3>Two outcomes in the fragment</h3>
+    <span class="file">src/main/resources/templates/<b>runqueryresult.html</b></span>
+    <p>It currently renders one thing. Give it two, and <strong>always</strong> keep the table:</p>
+    <div class="task box">
+      <span class="l">Do this</span>
+      <ul>
+        <li>a <code>&lt;div id="chart"&gt;</code> plus a small script calling
+        <code>vegaEmbed</code>, when a chart was chosen</li>
+        <li>the existing table underneath it, always — the chart is an addition, not a replacement</li>
+        <li>when no chart: the table plus <strong>a one-line reason</strong>. Not silence.
+        <em>"Not charted: a single value"</em>, <em>"Not charted: 4,812 rows"</em></li>
+      </ul>
+    </div>
+    <div class="box warn">
+      <span class="l">Change the target first</span>
+      <p>In <code>index.html</code> the element htmx swaps into is
+      <code>&lt;pre id="queryresult"&gt;</code> &mdash; left over from when the result was only ever
+      text. <strong>A chart inside a <code>&lt;pre&gt;</code> gets no layout width and draws
+      nothing.</strong> Make it a <code>&lt;div&gt;</code>, and give the table its own
+      <code>&lt;pre&gt;</code> inside the fragment instead.</p>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">4.3</div>
+  <div class="sb">
+    <h3>Money and dates, or Priya will not use it</h3>
+    <p>An unformatted axis of <code>3.9e5</code> is not going in a client deck. But the obvious way
+    to write this is a trap:</p>
+    <div class="box warn">
+      <span class="l">This one costs people twenty minutes</span>
+      <p><code>"axis": {"format": "£,.0f"}</code> looks right and is not.
+      <strong>d3-format only accepts its own <code>$</code> currency placeholder</strong>; a literal
+      <code>£</code> voids the whole format string. Vega then lays the chart out with
+      <strong>zero-sized marks and no axis padding</strong> &mdash; you get a blank plot, no
+      exception, nothing in the console, and a promise that resolves happily.</p>
+      <p style="margin-top:.55rem">Put <code>"$,.0f"</code> in the spec, and supply the actual symbol
+      as a locale when you embed:</p>
+<pre><code>var GBP = {decimal: '.', thousands: ',', grouping: [3], currency: ['\u00A3', '']};
+vegaEmbed('#chart', spec, {formatLocale: GBP});</code></pre>
+    </div>
+    <p>Dates: let the <code>temporal</code> type do the work, but pin the label angle yourself &mdash;
+    <code>"axis": {"labelAngle": -45}</code> for dates, <code>0</code> for categories. Vega decides
+    rotation on a first layout pass and never revisits it, which matters for the reason in 4.4.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">4.4</div>
+  <div class="sb">
+    <h3>When the chart comes out blank</h3>
+    <p>It will, at least once. Every failure in this feature is <strong>silent</strong> &mdash; no
+    exception, no console error, no rejected promise &mdash; so work down this list rather than
+    staring at the spec:</p>
+    <div class="box think">
+      <span class="l">Triage, in order</span>
+      <ol>
+        <li><strong>Is the container zero-wide?</strong> Run
+        <code>document.getElementById('chart').offsetWidth</code> in the console
+        <em>after</em> the chart renders. vega-embed puts its own class on the element you hand it,
+        and that class is <code>display:inline-block</code> &mdash; which shrink-wraps the very
+        container <code>width:"container"</code> is trying to measure. Force it back:
+        <code>#chart, #chart.vega-embed { display:block; width:100%; }</code></li>
+        <li><strong>Is it still inside a <code>&lt;pre&gt;</code>?</strong> See 4.2.</li>
+        <li><strong>Is a format string voiding the layout?</strong> Drop every
+        <code>format</code> from the spec. If the chart appears, that was it &mdash; see 4.3.</li>
+        <li><strong>Did the marks actually get built?</strong> Render with
+        <code>{renderer:'svg'}</code> and look at the mark paths. <code>M0,0h0v0h0Z</code> means
+        zero-sized marks: the data reached Vega but the layout failed, which points at 1 or 3, not
+        at your data.</li>
+      </ol>
+    </div>
+    <p>Worth noticing: the scenegraph will happily report <em>five rect marks</em> while the canvas
+    shows nothing. "Vega thinks it drew it" and "you can see it" are different claims, and only the
+    second one is the acceptance criterion.</p>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 5</span><h2>The question that catches everyone</h2><span class="mins">5 min</span></div>
+
+<div class="step">
+  <div class="sn">5.1</div>
+  <div class="sb">
+    <h3>Ask "how many sales in total" and watch</h3>
+    <div class="box think">
+      <span class="l">Answer honestly</span>
+      <p>What did your build do with one number? Most first attempts render a <strong>single giant
+      bar</strong>, which is worse than a table — it looks like a finding and says nothing.</p>
+      <p style="margin-top:.55rem">If yours charted it, go back to <code>allowedCharts()</code>. The
+      guard belongs there, in code you can test, <em>not</em> in the prompt.</p>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">5.2</div>
+  <div class="sb">
+    <h3>Stretch, if you have time</h3>
+    <div class="box task">
+      <span class="l">Priya's last requirement</span>
+      <p>Let her override the chart type, and make the override stick for that question. The
+      question box already persists in <code>localStorage</code> — see the script at the bottom of
+      <code>index.html</code> for the pattern, including why it is per-browser and not server-side.</p>
+    </div>
+  </div>
+</div>
+
+<div class="part"><span class="n">—</span><h2>Done when</h2><span class="mins">—</span></div>
+
+<div class="tw"><table>
+  <tbody>
+    <tr><td>A time series renders as a line, a category+measure as bars, two measures as a scatter</td></tr>
+    <tr><td>Money reads as £ with sensible steps; dates are legible</td></tr>
+    <tr><td>A scalar, or thousands of rows, or more than two dimensions renders as a table <strong>with a stated reason</strong></td></tr>
+    <tr><td>The refusal lives in <code>allowedCharts()</code>, not in the prompt</td></tr>
+    <tr><td>You have <strong>looked at</strong> a rendered chart &mdash; not just confirmed that the
+    code ran without error</td></tr>
+  </tbody>
+</table></div>
+
+</div>

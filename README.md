@@ -278,6 +278,17 @@ Before you can query data, you need to set up the environment and load data. You
 *   **`AdminController`**: Manages data ingestion and system maintenance tasks.
 *   **`IcebergController`**: (Internal) Additional Iceberg-specific operations.
 
+## Workshop material
+
+This repo doubles as the codebase for a 3-4 hour hands-on workshop.
+
+*   `WORKSHOP.md` — the core labs (H1, F1, F2, H2, H3, H4), full text
+*   `WORKSHOP-FEATURE-LABS.md` / `WORKSHOP-BONUS-LABS.md` — the product-ticket and technology framings
+*   `WORKSHOP-EXERCISE-INDEX.md` — all 41 exercises, with difficulty and prerequisites
+*   `SETUP_FLOW.md` — what the admin buttons do
+*   `docs/artifacts/` — the HTML source for the published workshop pages, including a
+    step-by-step build guide per lab. See `docs/artifacts/README.md` for the file-to-URL map.
+
 ## Acknowledgements
 
 This project borrows the basic Docker setup, data sources (UK Price Paid data), and inspiration from the following project:

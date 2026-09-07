@@ -1,0 +1,572 @@
+<title>Iceberg Setup Runbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --ground:   #F2F5F6;
+    --surface:  #FFFFFF;
+    --sunk:     #E8EEEF;
+    --ink:      #0E1A1D;
+    --muted:    #566A70;
+    --faint:    #7E9298;
+    --rule:     #D5DFE1;
+    --accent:   #0A6E77;
+    --accent-soft: #DCEEEF;
+    --warn:     #8E4E0E;
+    --warn-soft: #F6E9DA;
+    --shadow:   0 1px 2px rgba(14,26,29,.05), 0 8px 24px -16px rgba(14,26,29,.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:  #0A1113;
+      --surface: #121B1E;
+      --sunk:    #0E1719;
+      --ink:     #E3EDEF;
+      --muted:   #93A7AD;
+      --faint:   #6E858C;
+      --rule:    #223034;
+      --accent:  #56C6CD;
+      --accent-soft: #10292C;
+      --warn:    #DFA05B;
+      --warn-soft: #2A1F14;
+      --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:  #0A1113;
+    --surface: #121B1E;
+    --sunk:    #0E1719;
+    --ink:     #E3EDEF;
+    --muted:   #93A7AD;
+    --faint:   #6E858C;
+    --rule:    #223034;
+    --accent:  #56C6CD;
+    --accent-soft: #10292C;
+    --warn:    #DFA05B;
+    --warn-soft: #2A1F14;
+    --shadow:  0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1rem, 4vw, 3rem) 6rem;
+  }
+
+  /* ---------- masthead ---------- */
+  header.masthead { border-bottom: 2px solid var(--ink); padding-bottom: 1.5rem; }
+  .kicker {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .7rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 .9rem;
+  }
+  h1 {
+    font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+    font-weight: 700; font-size: clamp(2.3rem, 6vw, 3.6rem);
+    line-height: 1.02; letter-spacing: -.015em; text-wrap: balance;
+    margin: 0 0 .7rem;
+  }
+  .standfirst { font-size: 1.08rem; color: var(--muted); max-width: 42rem; margin: 0; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: .4rem 1.4rem; margin-top: 1.5rem;
+    font-family: "IBM Plex Mono", monospace; font-size: .74rem; color: var(--faint);
+  }
+  .meta span { white-space: nowrap; }
+  .meta b { color: var(--muted); font-weight: 500; }
+
+  /* ---------- generic type ---------- */
+  h2 {
+    font-family: "IBM Plex Sans Condensed", sans-serif; font-weight: 700;
+    font-size: 1.55rem; letter-spacing: -.01em; margin: 0 0 .5rem; text-wrap: balance;
+  }
+  h3 {
+    font-family: "IBM Plex Mono", monospace; font-weight: 600;
+    font-size: .74rem; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--faint); margin: 1.6rem 0 .5rem;
+  }
+  p { margin: 0 0 1rem; max-width: 40rem; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  code {
+    font-family: "IBM Plex Mono", monospace; font-size: .87em;
+    background: var(--sunk); border: 1px solid var(--rule);
+    border-radius: 3px; padding: .06em .32em;
+  }
+  pre {
+    font-family: "IBM Plex Mono", monospace; font-size: .82rem; line-height: 1.65;
+    background: var(--sunk); border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+    border-radius: 4px; padding: 1rem 1.1rem; overflow-x: auto; margin: 0 0 1.1rem;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: 1em; }
+  pre .c { color: var(--faint); }
+
+  /* ---------- step rail ---------- */
+  .steps { margin-top: 3.5rem; display: flex; flex-direction: column; gap: 3rem; }
+  .step { display: grid; grid-template-columns: 4.5rem 1fr; gap: 0 1.5rem; position: relative; }
+  .step-num {
+    font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 1.5rem;
+    color: var(--accent); line-height: 1; padding-top: .35rem;
+    display: flex; flex-direction: column; align-items: flex-start; gap: .75rem;
+  }
+  .step-num::after {
+    content: ""; flex: 1; width: 1px; background: var(--rule); margin-left: .55rem;
+  }
+  .step:last-child .step-num::after { display: none; }
+  .step-body > *:last-child { margin-bottom: 0; }
+
+  /* ---------- ledger (what runs) ---------- */
+  .ledger { border-top: 1px solid var(--rule); margin: 0 0 1.1rem; }
+  .ledger .row {
+    display: grid; grid-template-columns: 1.4rem 1fr; gap: .9rem;
+    padding: .75rem 0; border-bottom: 1px solid var(--rule);
+    align-items: baseline;
+  }
+  .ledger .tag {
+    font-family: "IBM Plex Mono", monospace; font-size: .8rem; font-weight: 600; color: var(--accent);
+  }
+  .ledger .what { font-size: .95rem; }
+  .ledger .what code { font-size: .82em; }
+  .ledger .note { display: block; color: var(--muted); font-size: .84rem; margin-top: .15rem; }
+
+  /* ---------- callouts ---------- */
+  .callout {
+    border: 1px solid var(--rule); border-left: 3px solid var(--warn);
+    background: var(--warn-soft); border-radius: 4px;
+    padding: .95rem 1.1rem; margin: 0 0 1.2rem; max-width: 42rem;
+  }
+  .callout p { margin: 0; font-size: .93rem; }
+  .callout p + p { margin-top: .55rem; }
+  .callout .label {
+    font-family: "IBM Plex Mono", monospace; font-size: .68rem; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--warn); display: block; margin-bottom: .3rem;
+  }
+  .verify {
+    border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+    background: var(--accent-soft); border-radius: 4px;
+    padding: .8rem 1.1rem; margin: 0 0 1.2rem; max-width: 42rem;
+    font-size: .93rem;
+  }
+  .verify .label {
+    font-family: "IBM Plex Mono", monospace; font-size: .68rem; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--accent); display: block; margin-bottom: .3rem;
+  }
+  .verify p { margin: 0; }
+
+  /* ---------- figures ---------- */
+  figure {
+    margin: 2rem 0; padding: 1.4rem; background: var(--surface);
+    border: 1px solid var(--rule); border-radius: 6px; box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  figure svg { display: block; width: 100%; min-width: 620px; max-width: 100%; height: auto; color: var(--ink); }
+  figcaption {
+    font-size: .86rem; color: var(--muted); margin-top: 1rem;
+    padding-top: .8rem; border-top: 1px solid var(--rule); max-width: 46rem;
+  }
+  .svg-box { fill: var(--surface); stroke: currentColor; stroke-width: 1.25; opacity: 1; }
+  .svg-box-sunk { fill: var(--sunk); stroke: var(--rule); stroke-width: 1.25; }
+  .svg-box-accent { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+  .svg-t { font-family: "IBM Plex Sans", sans-serif; font-size: 12px; fill: var(--ink); }
+  .svg-t-m { font-family: "IBM Plex Mono", monospace; font-size: 11px; fill: var(--ink); }
+  .svg-t-s { font-family: "IBM Plex Mono", monospace; font-size: 10px; fill: var(--muted); }
+  .svg-lane { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; letter-spacing: .12em; fill: var(--accent); font-weight: 600; }
+  .svg-line { stroke: currentColor; stroke-width: 1.4; fill: none; }
+  .svg-head-a { fill: var(--accent); }
+  .svg-line-dash { stroke: var(--accent); stroke-width: 1.4; fill: none; stroke-dasharray: 4 3; }
+  .svg-rule { stroke: var(--rule); stroke-width: 1; }
+
+  /* ---------- final tables ---------- */
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; margin: 1.4rem 0; }
+  .card {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 5px;
+    padding: 1rem 1.1rem;
+  }
+  .card h4 {
+    font-family: "IBM Plex Mono", monospace; font-size: .74rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 .45rem;
+  }
+  .card p { font-size: .9rem; color: var(--muted); margin: 0; }
+  .card p strong { color: var(--ink); font-weight: 500; }
+
+  hr.sep { border: 0; border-top: 1px solid var(--rule); margin: 3.5rem 0; }
+
+  @media (max-width: 640px) {
+    .step { grid-template-columns: 1fr; gap: .4rem; }
+    .step-num { flex-direction: row; align-items: center; padding-top: 0; }
+    .step-num::after { display: none; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="kicker">big-data-ai · one-time bootstrap</p>
+    <h1>Iceberg Setup Runbook</h1>
+    <p class="standfirst">Four clicks on <code>/admin</code> take a cold container to a queryable Iceberg
+    table: create the warehouse, pull a year of UK Price Paid data, load it through Spark, then ask
+    questions in English.</p>
+    <div class="meta">
+      <span><b>App</b> localhost:7860</span>
+      <span><b>Catalog</b> LakeKeeper :8181</span>
+      <span><b>Storage</b> MinIO :9000 / :9001</span>
+      <span><b>Table</b> lakekeeper.housing.staging_prices</span>
+    </div>
+  </header>
+
+  <div class="steps">
+
+    <!-- STEP 0 -->
+    <section class="step">
+      <div class="step-num">0</div>
+      <div class="step-body">
+        <h2>Run the stack</h2>
+        <p>One image carries the app, Postgres, LakeKeeper and MinIO;
+        <code>docker-entrypoint.sh</code> starts them in dependency order and symlinks
+        <code>/app/data</code> onto the mounted volume, so downloaded CSVs survive a restart.</p>
+<pre><code>docker build -t big-data-ai-app .
+
+docker run -d --name big-data-ai \
+  -p 7860:7860 -p 8181:8181 -p 9000:9000 -p 9001:9001 \
+  -v "$PWD/data":/data \
+  --env-file .env \
+  big-data-ai-app
+
+docker logs -f big-data-ai   <span class="c"># leave this running — see the callout below</span></code></pre>
+        <p><code>HF_TOKEN</code> in <code>.env</code> is only read by <strong>Generate Query</strong>.
+        Setup, download and load all work without it.</p>
+
+        <div class="callout">
+          <span class="label">Read the logs, not the page</span>
+          <p>Every admin button answers <em>“… operation initiated.”</em> —
+          <code>AdminController</code> adds that message unconditionally after the service call
+          returns. It is not a success signal. The real outcome (<code>✅</code> or
+          <code>Error …</code>) is printed to stdout only, so keep the log tail open for all
+          three steps.</p>
+        </div>
+
+        <p>When Spring Boot reports it is up, open <strong>http://localhost:7860/admin</strong>.</p>
+      </div>
+    </section>
+
+    <!-- STEP 1 -->
+    <section class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h2>Setup Environment</h2>
+        <p>Click <strong>Setup Environment</strong>. That posts to <code>/admin/setup</code>, which calls
+        <code>IcebergService.setup()</code> and does three things in order — all of them idempotent,
+        so re-clicking is safe.</p>
+
+        <div class="ledger">
+          <div class="row"><span class="tag">a</span><span class="what">
+            <code>CreateBucket("warehouse")</code> against MinIO
+            <span class="note">Credentials come from <code>app.s3.access-key</code> / <code>app.s3.secret-key</code>, defaulting to <code>minio</code> / <code>minio1234</code>. A 409 (bucket exists) is swallowed.</span>
+          </span></div>
+          <div class="row"><span class="tag">b</span><span class="what">
+            <code>POST /management/v1/bootstrap</code> to LakeKeeper
+            <span class="note">Accepts the terms of use. A 400 logs <em>“already bootstrapped — skipping”</em>.</span>
+          </span></div>
+          <div class="row"><span class="tag">c</span><span class="what">
+            <code>POST /management/v1/warehouse</code> to LakeKeeper
+            <span class="note">Registers warehouse <code>lakehouse</code> over the <code>warehouse</code> bucket: path-style access, <code>flavor: minio</code>, STS enabled.</span>
+          </span></div>
+        </div>
+
+        <p>Both LakeKeeper calls go through the <em>Management</em> API with a plain
+        <code>HttpClient</code> — that is deliberately not the Iceberg REST catalog protocol, which
+        is why <code>RESTCatalog</code> isn’t used here.</p>
+
+        <div class="verify">
+          <span class="label">Verify</span>
+          <p>Three <code>✅</code> lines in the log, and a <code>warehouse</code> bucket visible in
+          the MinIO console at <strong>localhost:9001</strong> (<code>minio</code> /
+          <code>minio1234</code>).</p>
+        </div>
+
+        <div class="callout">
+          <span class="label">Two names that must match</span>
+          <p>The warehouse is registered as <code>lakehouse</code>, and <code>SparkConfig</code> asks for
+          <code>spark.sql.catalog.lakekeeper.warehouse=lakehouse</code>. The credentials are settings rather than literals now, but both sides still have to agree: change <code>MINIO_ROOT_USER</code> / <code>MINIO_ROOT_PASSWORD</code> and you must set <code>APP_S3_ACCESS_KEY</code> / <code>APP_S3_SECRET_KEY</code> to match, or this step fails.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h2>Download Data</h2>
+        <p>Type a year — <strong>2015</strong> — into the Year field under <em>Download Data</em> and
+        click the button. <code>IcebergService.download()</code> fetches one CSV of HM Land Registry
+        Price Paid records, roughly a million rows:</p>
+<pre><code>http://prod.publicdata.landregistry.gov.uk.s3-website-eu-west-1.amazonaws.com/pp-2015.csv
+  → ./data/house_prices/pp-2015.csv      <span class="c"># /app/data → the mounted volume</span></code></pre>
+
+        <div class="ledger">
+          <div class="row"><span class="tag">·</span><span class="what">
+            Leave the year blank and it pulls <strong>2015 through 2025</strong>
+            <span class="note">Ten parallel downloads, capped at a pool of 10. That range is hardcoded — the <code>2023</code> in the input placeholder is just placeholder text.</span>
+          </span></div>
+          <div class="row"><span class="tag">·</span><span class="what">
+            A year already on disk is skipped
+            <span class="note"><code>Skipped: pp-2015.csv (already exists)</code> — safe to re-click.</span>
+          </span></div>
+          <div class="row"><span class="tag">·</span><span class="what">
+            A year outside 2015–2025 fails quietly
+            <span class="note">The upstream returns a non-200 and it is logged as <code>Failed:</code>; the page still says “initiated”.</span>
+          </span></div>
+        </div>
+
+        <div class="verify">
+          <span class="label">Verify</span>
+          <p><code>✓ Downloaded: pp-2015.csv</code> in the log, then <strong>reload
+          <code>/admin</code></strong> — the “Files already downloaded” list is rendered on
+          <code>GET /admin</code> only, so it never refreshes on its own.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h2>Load Data</h2>
+        <p>Enter the <strong>same year</strong> under <em>Load Data</em> and click. This is the step
+        that actually touches Iceberg, via the Spark session running embedded in the app:</p>
+
+        <div class="ledger">
+          <div class="row"><span class="tag">1</span><span class="what">
+            <code>CREATE NAMESPACE IF NOT EXISTS lakekeeper.housing</code>
+          </span></div>
+          <div class="row"><span class="tag">2</span><span class="what">
+            <code>CREATE TABLE IF NOT EXISTS … staging_prices … USING iceberg</code>
+            <span class="note">Sixteen columns, each carrying a <code>COMMENT</code> lifted from the Land Registry field docs, at <code>LOCATION 's3://warehouse/housing/staging'</code>.</span>
+          </span></div>
+          <div class="row"><span class="tag">3</span><span class="what">
+            Read the CSV headerless against an explicit schema
+            <span class="note"><code>date_of_transfer</code> arrives as text and is parsed with <code>to_date(…, "yyyy-MM-dd HH:mm")</code>, then the columns are re-selected in table order.</span>
+          </span></div>
+          <div class="row"><span class="tag">4</span><span class="what">
+            <code>writeTo("lakekeeper.housing.staging_prices").append()</code>
+            <span class="note">Parquet data files land in MinIO; only the snapshot metadata goes to LakeKeeper and its Postgres.</span>
+          </span></div>
+        </div>
+
+        <div class="callout">
+          <span class="label">Three things that bite</span>
+          <p><strong>Order is load-bearing.</strong> Load before Setup and the table’s
+          <code>s3://warehouse</code> location has no registered warehouse behind it. Load before
+          Download and you get one <code>File not found</code> line in the log — the page still
+          reports success.</p>
+          <p><strong>It appends, it does not upsert.</strong> Loading the same year twice doubles the
+          rows. Clear the table first if you need to redo a load.</p>
+          <p><strong>A blank year loads every file</strong> in <code>data/house_prices</code>
+          (<code>.gitkeep</code> excluded).</p>
+        </div>
+
+        <div class="verify">
+          <span class="label">Verify</span>
+          <p><code>✅ Data loaded successfully from data/house_prices/pp-2015.csv</code>. Spark runs
+          <code>local[*]</code> inside the app process, so a full year takes minutes and real
+          memory — that line is the only progress indicator you get.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h2>Ask it something</h2>
+        <p>Go to <strong>http://localhost:7860/</strong>.</p>
+        <div class="grid2">
+          <div class="card">
+            <h4>Generate Query</h4>
+            <p><strong>POST /generatequery</strong> — your question plus the table&rsquo;s column schema go to the chat model. The schema is read from the catalog with <code>DESCRIBE TABLE</code> and cached, so adding a column shows up without a rebuild; the model is whichever the <strong>Model Picker</strong> on <code>/admin</code> is set to. It returns JSON &mdash; <code>sql</code>, <code>columns_used</code>, <code>assumptions</code> &mdash; because the system prompt asks for it.</p>
+          </div>
+          <div class="card">
+            <h4>Run Query</h4>
+            <p><strong>POST /runquery</strong> — the SQL is handed straight to
+            <code>spark.sql()</code> against the Iceberg table. The first <strong>100</strong> rows
+            are rendered.</p>
+          </div>
+        </div>
+        <p>The SQL sits in an editable box between the two, so a query that comes back slightly wrong
+        can be fixed by hand before running.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <hr class="sep">
+
+  <h2>What each click actually touches</h2>
+  <p>Three buttons, three different halves of the stack. Only step 3 goes through Spark; steps 1 and 2
+  are plain HTTP from the Spring app.</p>
+
+  <figure>
+    <svg viewBox="0 0 960 470" role="img" aria-label="Lane diagram: Setup Environment calls MinIO CreateBucket and two LakeKeeper management endpoints; Download Data fetches a CSV from HM Land Registry onto the mounted volume; Load Data drives Spark, which reads that CSV and writes Parquet files to MinIO and snapshot metadata to LakeKeeper.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"></path>
+        </marker>
+        <marker id="ar-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path class="svg-head-a" d="M0,0 L10,5 L0,10 z"></path>
+        </marker>
+      </defs>
+
+      <!-- lane 1 -->
+      <text class="svg-lane" x="16" y="34">STEP 1 — SETUP ENVIRONMENT</text>
+      <rect class="svg-box-accent" x="16" y="66" width="150" height="48" rx="4"></rect>
+      <text class="svg-t" x="91" y="86" text-anchor="middle">Setup</text>
+      <text class="svg-t" x="91" y="102" text-anchor="middle">Environment</text>
+      <path class="svg-line" d="M166,90 H262" marker-end="url(#ar)"></path>
+      <text class="svg-t-s" x="214" y="82" text-anchor="middle">/admin/setup</text>
+      <rect class="svg-box" x="270" y="66" width="160" height="48" rx="4"></rect>
+      <text class="svg-t-m" x="350" y="86" text-anchor="middle">IcebergService</text>
+      <text class="svg-t-m" x="350" y="102" text-anchor="middle">.setup()</text>
+
+      <rect class="svg-box-sunk" x="520" y="44" width="425" height="36" rx="4"></rect>
+      <text class="svg-t-m" x="534" y="66">a  MinIO · CreateBucket("warehouse")</text>
+      <rect class="svg-box-sunk" x="520" y="88" width="425" height="36" rx="4"></rect>
+      <text class="svg-t-m" x="534" y="110">b  LakeKeeper · POST /management/v1/bootstrap</text>
+      <rect class="svg-box-sunk" x="520" y="132" width="425" height="36" rx="4"></rect>
+      <text class="svg-t-m" x="534" y="154">c  LakeKeeper · POST …/warehouse → "lakehouse"</text>
+      <path class="svg-line" d="M430,90 H475 V62 H512" marker-end="url(#ar)"></path>
+      <path class="svg-line" d="M430,90 H512" marker-end="url(#ar)"></path>
+      <path class="svg-line" d="M430,90 H475 V150 H512" marker-end="url(#ar)"></path>
+
+      <line class="svg-rule" x1="16" y1="186" x2="945" y2="186"></line>
+
+      <!-- lane 2 -->
+      <text class="svg-lane" x="16" y="212">STEP 2 — DOWNLOAD DATA</text>
+      <rect class="svg-box-accent" x="16" y="244" width="150" height="48" rx="4"></rect>
+      <text class="svg-t" x="91" y="264" text-anchor="middle">Download Data</text>
+      <text class="svg-t-m" x="91" y="280" text-anchor="middle">year = 2015</text>
+      <path class="svg-line" d="M166,268 H262" marker-end="url(#ar)"></path>
+      <text class="svg-t-s" x="214" y="260" text-anchor="middle">/admin/download</text>
+      <rect class="svg-box" x="270" y="244" width="160" height="48" rx="4"></rect>
+      <text class="svg-t-m" x="350" y="264" text-anchor="middle">IcebergService</text>
+      <text class="svg-t-m" x="350" y="280" text-anchor="middle">.download("2015")</text>
+
+      <rect class="svg-box-sunk" x="520" y="222" width="425" height="36" rx="4"></rect>
+      <text class="svg-t-m" x="534" y="244">HM Land Registry · GET pp-2015.csv</text>
+      <rect class="svg-box-sunk" x="520" y="278" width="425" height="36" rx="4"></rect>
+      <text class="svg-t-m" x="534" y="300">/app/data/house_prices/pp-2015.csv</text>
+      <path class="svg-line" d="M430,268 H475 V240 H512" marker-end="url(#ar)"></path>
+      <path class="svg-line" d="M700,258 V270" marker-end="url(#ar)"></path>
+      <text class="svg-t-s" x="712" y="271">stream to the mounted volume</text>
+
+      <line class="svg-rule" x1="16" y1="332" x2="945" y2="332"></line>
+
+      <!-- lane 3 -->
+      <text class="svg-lane" x="16" y="358">STEP 3 — LOAD DATA</text>
+      <rect class="svg-box-accent" x="16" y="380" width="150" height="48" rx="4"></rect>
+      <text class="svg-t" x="91" y="400" text-anchor="middle">Load Data</text>
+      <text class="svg-t-m" x="91" y="416" text-anchor="middle">year = 2015</text>
+      <path class="svg-line" d="M166,404 H262" marker-end="url(#ar)"></path>
+      <text class="svg-t-s" x="214" y="396" text-anchor="middle">/admin/load</text>
+      <rect class="svg-box" x="270" y="380" width="160" height="48" rx="4"></rect>
+      <text class="svg-t-m" x="350" y="400" text-anchor="middle">IcebergService</text>
+      <text class="svg-t-m" x="350" y="416" text-anchor="middle">.load("2015")</text>
+
+      <path class="svg-line" d="M430,404 H512" marker-end="url(#ar)"></path>
+      <text class="svg-t-s" x="471" y="396" text-anchor="middle">SQL + append</text>
+      <rect class="svg-box" x="520" y="380" width="160" height="48" rx="4"></rect>
+      <text class="svg-t-m" x="600" y="400" text-anchor="middle">SparkSession</text>
+      <text class="svg-t-m" x="600" y="416" text-anchor="middle">local[*] + Iceberg</text>
+      <path class="svg-line-dash" d="M600,314 V372" marker-end="url(#ar-a)"></path>
+      <text class="svg-t-s" x="610" y="344">read CSV</text>
+
+      <rect class="svg-box-sunk" x="750" y="358" width="195" height="44" rx="4"></rect>
+      <text class="svg-t-m" x="762" y="378">LakeKeeper + Postgres</text>
+      <text class="svg-t-s" x="762" y="393">namespace · table · snapshot</text>
+      <rect class="svg-box-sunk" x="750" y="416" width="195" height="44" rx="4"></rect>
+      <text class="svg-t-m" x="762" y="436">MinIO s3://warehouse</text>
+      <text class="svg-t-s" x="762" y="451">housing/staging · Parquet</text>
+      <path class="svg-line" d="M680,396 H716 V380 H742" marker-end="url(#ar)"></path>
+      <path class="svg-line" d="M680,412 H716 V438 H742" marker-end="url(#ar)"></path>
+      <text class="svg-t-s" x="740" y="352" text-anchor="end">metadata</text>
+      <text class="svg-t-s" x="740" y="410" text-anchor="end">data files</text>
+    </svg>
+    <figcaption>Each admin button is a synchronous <code>POST</code> that returns only after the work
+    finishes. Steps 1 and 2 never touch Spark; step 3 is the only one that splits — table metadata to
+    the catalog, Parquet bytes to object storage. The dashed arrow is the one dependency between
+    steps: Spark reads the file step 2 put on disk.</figcaption>
+  </figure>
+
+  <h2>What to re-run, and when</h2>
+  <p>The steps are not equally repeatable. Setup is once per data root; the other two are per unit of
+  data, and only one of them has an undo.</p>
+
+  <figure>
+    <svg viewBox="0 0 900 230" role="img" aria-label="Chain diagram: Setup Environment runs once per data root, Download runs once per year, Load runs once per file, then Query. Clear Data returns from Query to Load by dropping the table; downloading another year returns to the Download step.">
+      <rect class="svg-box-accent" x="20" y="40" width="160" height="52" rx="4"></rect>
+      <text class="svg-t" x="100" y="63" text-anchor="middle">Setup</text>
+      <text class="svg-t" x="100" y="79" text-anchor="middle">Environment</text>
+      <text class="svg-t-s" x="100" y="112" text-anchor="middle">once per data root</text>
+
+      <path class="svg-line" d="M180,66 H242" marker-end="url(#ar)"></path>
+
+      <rect class="svg-box-accent" x="250" y="40" width="160" height="52" rx="4"></rect>
+      <text class="svg-t" x="330" y="71" text-anchor="middle">Download Data</text>
+      <text class="svg-t-s" x="330" y="112" text-anchor="middle">once per year</text>
+
+      <path class="svg-line" d="M410,66 H472" marker-end="url(#ar)"></path>
+
+      <rect class="svg-box-accent" x="480" y="40" width="160" height="52" rx="4"></rect>
+      <text class="svg-t" x="560" y="71" text-anchor="middle">Load Data</text>
+      <text class="svg-t-s" x="560" y="112" text-anchor="middle">appends — never twice</text>
+
+      <path class="svg-line" d="M640,66 H702" marker-end="url(#ar)"></path>
+
+      <rect class="svg-box" x="710" y="40" width="160" height="52" rx="4"></rect>
+      <text class="svg-t" x="790" y="71" text-anchor="middle">Generate + Run Query</text>
+
+      <path class="svg-line" d="M790,92 V160 H560 V100" marker-end="url(#ar)"></path>
+      <text class="svg-t-s" x="675" y="153" text-anchor="middle">Clear Data — DROP TABLE … PURGE</text>
+
+      <path class="svg-line" d="M790,92 V200 H330 V100" marker-end="url(#ar)"></path>
+      <text class="svg-t-s" x="560" y="193" text-anchor="middle">another year</text>
+    </svg>
+    <figcaption><strong>Clear Data</strong> drops the table with <code>PURGE</code> — it removes the
+    rows and their data files but leaves the namespace, the warehouse registration and the downloaded
+    CSVs alone. So the way back from a bad load is Load, not Setup.</figcaption>
+  </figure>
+
+  <div class="grid2">
+    <div class="card">
+      <h4>Where state lives</h4>
+      <p><strong>CSVs</strong> under <code>DATA_ROOT/app/house_prices</code>, <strong>Iceberg data</strong>
+      in <code>DATA_ROOT/minio</code>, <strong>catalog</strong> as a periodic <code>pg_dump</code> to
+      <code>lakekeeper-catalog.sql</code>. Postgres itself is rebuilt from that dump on every boot.</p>
+    </div>
+    <div class="card">
+      <h4>Running from source</h4>
+      <p>Start the container without publishing 7860, then point the app at the host:
+      <code>APP_CATALOG_URI</code>, <code>APP_CATALOG_BASE_URL</code> and <code>APP_S3_ENDPOINT</code>
+      must all be overridden — the defaults are compose service names that don’t resolve from the host.</p>
+    </div>
+    <div class="card">
+      <h4>On Hugging Face Spaces</h4>
+      <p>Only port 7860 is published, and the Hub page is an iframe wrapper that doesn’t proxy
+      sub-paths. Reach the admin page at <code>https://&lt;owner&gt;-&lt;name&gt;.hf.space/admin</code>,
+      not through the Hub URL.</p>
+    </div>
+  </div>
+
+</div>

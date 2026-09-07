@@ -1,0 +1,589 @@
+<title>Lakehouse Exercise Picker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+
+<style>
+  :root {
+    --ground:#FAF9FC; --surface:#FFFFFF; --sunk:#F1EFF5; --ink:#17141F;
+    --muted:#5A5370; --faint:#837B99; --rule:#E3DFEB;
+    --accent:#C96A05; --accent-soft:#FBEEDC;
+    --time:#5646CE; --time-soft:#EDEAFB;
+    --green:#1F6B4A; --green-soft:#DFF0E7;
+    --shadow:0 1px 2px rgba(23,20,31,.05), 0 10px 30px -22px rgba(23,20,31,.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --ink:#EDEAF4;
+      --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+      --accent:#FFB44D; --accent-soft:#2B1E0E;
+      --time:#A594FF; --time-soft:#1D1836;
+      --green:#5FC492; --green-soft:#10241B;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --ink:#EDEAF4;
+    --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+    --accent:#FFB44D; --accent-soft:#2B1E0E;
+    --time:#A594FF; --time-soft:#1D1836;
+    --green:#5FC492; --green-soft:#10241B;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.55;
+    margin: 0; -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 60rem; margin: 0 auto; padding: clamp(2rem,5vw,4rem) clamp(1rem,4vw,3rem) 6rem; }
+
+  .masthead { border-bottom: 3px double var(--rule); padding-bottom: 1.6rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(2.2rem, 5.6vw, 3.4rem); line-height: 1.02; letter-spacing: -.025em;
+    margin: 0 0 .9rem; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.1rem; color: var(--muted); max-width: 40rem; margin: 0; }
+
+  h2 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.6rem;
+    letter-spacing: -.018em; margin: 0; text-wrap: balance;
+  }
+  .cat {
+    display: flex; align-items: baseline; gap: .9rem; flex-wrap: wrap;
+    margin: 3rem 0 1.2rem; border-top: 2px solid var(--ink); padding-top: 1rem;
+  }
+  .cat .letter {
+    font-family: "JetBrains Mono", monospace; font-size: .7rem; font-weight: 700;
+    letter-spacing: .18em; color: var(--accent);
+  }
+  .cat .sub { font-size: .93rem; color: var(--muted); width: 100%; margin: 0; max-width: 42rem; }
+  p { margin: 0 0 1rem; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--time); outline-offset: 3px; }
+  code {
+    font-family: "JetBrains Mono", monospace; font-size: .82em;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 3px; padding: .04em .3em;
+  }
+
+  /* exercise rows */
+  .ex {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 7px;
+    box-shadow: var(--shadow); padding: 1.1rem 1.3rem; margin-bottom: .9rem;
+  }
+  .ex.star { border-color: var(--accent); border-width: 1.5px; }
+  .ex-head { display: flex; align-items: baseline; gap: .7rem; flex-wrap: wrap; margin-bottom: .45rem; }
+  .ex-id {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; font-weight: 700; letter-spacing: .09em;
+    background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 3px; padding: .16rem .45rem; white-space: nowrap;
+  }
+  .ex-head h3 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.18rem;
+    letter-spacing: -.01em; margin: 0; line-height: 1.2; flex: 1 1 14rem;
+  }
+  .desc { font-size: .97rem; margin: 0 0 .7rem; max-width: 44rem; color: var(--ink); }
+  .note { font-size: .89rem; color: var(--muted); margin: .6rem 0 0; max-width: 44rem; }
+  .note b { color: var(--ink); font-weight: 600; }
+
+  .meta { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .meta span {
+    font-family: "JetBrains Mono", monospace; font-size: .63rem; letter-spacing: .05em;
+    border: 1px solid var(--rule); border-radius: 999px; padding: .2rem .55rem;
+    color: var(--muted); white-space: nowrap; background: var(--sunk);
+  }
+  .m-sql  { background: var(--time-soft); border-color: var(--time); color: var(--time); }
+  .m-java { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .m-cli  { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+  .m-hf   { background: transparent; border-style: dashed; }
+  .m-warn { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+
+  .tw { overflow-x: auto; margin: 1.2rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; min-width: 22rem; }
+  th, td { text-align: left; padding: .5rem .8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); font-weight: 500; border-bottom: 2px solid var(--ink);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.k { font-family: "JetBrains Mono", monospace; font-size: .8rem; white-space: nowrap; }
+
+  .note-box {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 4px 4px 0; padding: .9rem 1.1rem; margin: 1.2rem 0; max-width: 44rem;
+  }
+  .note-box p { margin: 0; font-size: .95rem; }
+  .note-box .l {
+    font-family: "JetBrains Mono", monospace; font-size: .63rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); display: block; margin-bottom: .3rem;
+  }
+  /* scheme key in the masthead */
+  .scheme { display: grid; gap: .3rem; margin-top: 1.4rem; max-width: 34rem; }
+  .scheme div {
+    display: grid; grid-template-columns: 2.1rem 1fr auto; align-items: baseline;
+    gap: .7rem; padding: .38rem .6rem; background: var(--sunk);
+    border: 1px solid var(--rule); border-radius: 5px;
+  }
+  .scheme b {
+    font-family: "JetBrains Mono", monospace; font-size: .95rem; font-weight: 700;
+    color: var(--accent); text-align: center;
+  }
+  .scheme span { font-size: .92rem; color: var(--ink); }
+  .scheme i {
+    font-family: "JetBrains Mono", monospace; font-size: .72rem; font-style: normal;
+    color: var(--faint); font-variant-numeric: tabular-nums;
+  }
+  /* old -> new renumbering key */
+  .renum {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: .3rem .8rem; margin: 1.2rem 0;
+  }
+  .renum div {
+    font-family: "JetBrains Mono", monospace; font-size: .74rem;
+    display: flex; align-items: baseline; gap: .4rem;
+    padding: .25rem .45rem; border-bottom: 1px solid var(--rule);
+  }
+  .renum .o { color: var(--faint); text-decoration: line-through; }
+  .renum .a { color: var(--faint); }
+  .renum .n { color: var(--accent); font-weight: 700; margin-left: auto; }
+
+  .legend { background: var(--sunk); border: 1px solid var(--rule); border-radius: 7px; padding: 1rem 1.2rem; margin: 1.6rem 0; }
+  .legend p { margin: 0 0 .5rem; font-size: .93rem; }
+  .legend p:last-child { margin-bottom: 0; }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">40 exercises · sorted for an AI-features workshop</p>
+  <h1>Lakehouse Exercise Picker</h1>
+  <p class="standfirst">Reordered around features that <em>only exist because there's an LLM in the
+  loop</em>, with the Hugging Face platform labs kept and the Iceberg, streaming and non-LLM material
+  parked at the bottom rather than deleted.</p>
+  <p class="standfirst" style="margin-top:.9rem">Every exercise has been renumbered into one scheme.
+  The letter is the band, the number is the order you meet it — so <strong>A3</strong> is the third
+  AI feature, and reading top to bottom is F, A, R, H, P.</p>
+  <div class="scheme">
+    <div><b>F</b><span>AI foundations — do these first</span><i>2</i></div>
+    <div><b>A</b><span>Features only an LLM makes possible</span><i>13</i></div>
+    <div><b>R</b><span>Making the AI layer reliable</span><i>5</i></div>
+    <div><b>H</b><span>Hugging Face platform</span><i>5</i></div>
+    <div><b>P</b><span>Parked — kept, not scheduled</span><i>15</i></div>
+  </div>
+</header>
+
+<div class="note-box">
+  <span class="l">What the app does with an LLM today — you were right</span>
+  <p>The only product feature is <strong>natural language → SQL</strong>, in
+  <code>AiService.generateQuery()</code>. There are two other call sites, both in
+  <code>LLMController</code>: <code>/ai/simple</code> (echo a prompt) and <code>/ai/prompt</code>
+  (a <code>PromptTemplate</code> demo about dogs). Neither touches the data and neither is linked
+  from any template — Spring AI scaffolding, not features. There are <strong>no embeddings, no tool
+  calling and no structured output</strong> anywhere in <code>src/</code>.</p>
+  <p style="margin-top:.55rem">Worth noting before 25 Spaces go public at the end of the day:
+  <code>/ai/simple</code> is an unauthenticated <code>GET</code> that bills a real inference call.
+  Anyone with the URL can spend your credits. Deleting those two endpoints is a sensible five-minute
+  pre-workshop change.</p>
+</div>
+
+<div class="legend">
+  <p><strong>Hands:</strong>
+    <span class="meta" style="display:inline-flex;vertical-align:middle"><span class="m-cli">CLI</span><span class="m-sql">SQL</span><span class="m-java">Java</span></span>
+    — SQL means through the app's existing query box, no code.</p>
+  <p><strong>Deploys:</strong> round trips to the Space at ~90 s each.</p>
+  <p><strong>NEW:</strong> nine tickets written for this reordering — features where the LLM is the
+  enabling ingredient rather than a convenience. <strong>A1 to A9 exist only here so far</strong>, as
+  the summaries below. <strong>A10 to A13</strong> and <strong>P7 to P14</strong> have full tickets —
+  persona, quoted ask, acceptance criteria — on the <a href="https://claude.ai/code/artifact/3a8d31cd-3d4c-49ca-887b-8a199b5fccca">Meridian Backlog</a> page, which
+  now uses these same numbers.</p>
+</div>
+
+<div class="cat"><span class="letter">F</span><h2>AI foundations</h2>
+  <p class="sub">Do these first. Everything below is measured with F1's harness, and F2's
+  runtime-parameter change is what stops every later experiment from costing a deploy.</p></div>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">F1</span><h3>Make the analyst trustworthy</h3></div>
+  <p class="desc">Fix five real defects in the text-to-SQL path — model output reaching
+  <code>spark.sql()</code> unvalidated, a hardcoded schema that rots, no <code>LIMIT</code>, markdown
+  fences — then build ten questions with known answers and a runner that scores
+  <em>generated / parses / executes / correct</em> plus latency.</p>
+  <div class="meta"><span>40 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note"><b>The keystone.</b> Everything in sections 2 and 3 answers "did that make it better?" with this harness, or answers it with opinion.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">F2</span><h3>Model bake-off, and the model as a parameter</h3></div>
+  <p class="desc">Make the model a per-request option instead of a deployment, then run the ten
+  questions across a pinned provider, <code>:fastest</code>, <code>:cheapest</code> and a much
+  smaller model — filling in accuracy, p50 latency and cost.</p>
+  <div class="meta"><span>30 min</span><span class="m-java">Java (small)</span><span>1 deploy</span><span class="m-hf">Router policies</span></div>
+  <p class="note">The winner is rarely the biggest model. Also the change that lets every later AI lab iterate without redeploying.</p>
+</article>
+
+<div class="cat"><span class="letter">A</span><h2>Features only an LLM makes possible</h2>
+  <p class="sub">The main event. Each is a product capability you could not ship with SQL and rules
+  alone, and each teaches a distinct, transferable pattern for putting a language model behind a
+  feature. Every entry in this band is also a ticket on the
+  <a href="https://claude.ai/code/artifact/3a8d31cd-3d4c-49ca-887b-8a199b5fccca">Meridian Property Backlog</a> — the same exercises written as work a fictional
+  client asked for, with the persona, the quoted ask and testable acceptance criteria. Read the
+  summary here to choose; hand out the ticket there.</p></div>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">A1</span><span class="ex-id">NEW</span><h3>Just tell it what to watch</h3></div>
+  <p class="desc">Ash types <em>"tell me when flats in Camden get cheaper than terraced houses in
+  Islington"</em>. The LLM compiles that sentence <strong>once</strong> into a typed rule object —
+  metric, filters, comparator, window, threshold — validated against a JSON schema and stored. From
+  then on the rule is evaluated deterministically by ordinary code, on every load, forever.</p>
+  <div class="meta"><span>50 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note"><b>The pattern: LLM as a compiler, not a runtime.</b> Generate once, execute deterministically. The rule is auditable, cheap and testable, and the model is never in the path when the alert actually fires. The most reusable idea in this section.</p>
+</article>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">A2</span><span class="ex-id">NEW</span><h3>Explain the move</h3></div>
+  <p class="desc">Priya clicks a number — "Camden, down 8% in March" — and gets a paragraph explaining
+  it. The system computes the decomposition first (transaction volume, mix shift by property type,
+  the largest few sales, the same month last year); the LLM narrates <em>only</em> from that evidence
+  bundle, and must say plainly which part of the move it cannot account for.</p>
+  <div class="meta"><span>45 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note"><b>The pattern: evidence-grounded narration with a refusal path.</b> The hard part isn't the prose, it's making the model admit the residual instead of inventing a cause. Test it by feeding a move that genuinely has no explanation in the data.</p>
+</article>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">A3</span><span class="ex-id">NEW</span><h3>Ask me if you're not sure</h3></div>
+  <p class="desc">Instead of silently guessing, the app detects when a question is under-specified —
+  "London" is both a <code>town</code> value and 33 districts, "last year" is ambiguous in January,
+  "cheap" has no definition — and asks <strong>one</strong> targeted clarifying question with two to
+  four concrete options, then proceeds.</p>
+  <div class="meta"><span>40 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note"><b>The pattern: calibrated abstention.</b> Deciding <em>when</em> not to answer is a judgement no rule engine makes well. Measure it: how many clarifications did it ask on the ten eval questions that needed none? Over-asking fails as surely as guessing.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">A4</span><span class="ex-id">NEW</span><h3>"…and what about houses?"</h3></div>
+  <p class="desc">Conversational follow-ups. "Show me Camden flats in 2023" → "what about houses?" →
+  "and compare that to Islington". Each turn is resolved against the previous ones and
+  <strong>rewritten into a standalone question</strong> before any SQL is generated.</p>
+  <div class="meta"><span>45 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note"><b>The pattern: rewrite, then generate.</b> The tempting shortcut — paste the whole conversation into the SQL prompt — degrades fast and is impossible to debug. Separating "what did they mean" from "what SQL is that" gives you two things you can test independently.</p>
+</article>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">A5</span><span class="ex-id">NEW</span><h3>Build me the client pack</h3></div>
+  <p class="desc">Given an audience — <em>"first-time buyer, Bristol, £300k budget"</em> or
+  <em>"buy-to-let investor comparing Manchester and Leeds"</em> — the LLM <strong>plans the
+  report</strong>: which sections, which metrics, which comparisons, in what order. The system
+  computes each piece. The LLM then writes the connective prose, and every figure is verified against
+  the computed bundle before the pack renders.</p>
+  <div class="meta"><span>60 min</span><span class="m-java">Java</span><span>3+ deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note"><b>The pattern: plan → compute → narrate → verify.</b> The model chooses the shape of the answer, which is the part that genuinely needs judgement, and never touches a number. The biggest demo in the set — two audiences produce visibly different reports from identical data.</p>
+</article>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">A6</span><span class="ex-id">NEW</span><h3>What even is this file?</h3></div>
+  <p class="desc">Drop an unfamiliar CSV in — an EPC extract, an ONS postcode file — and the LLM
+  proposes a reading of it: what each column means, which are coded and what the codes are, candidate
+  join keys onto the sales table, likely PII, and the caveats an analyst should know. A human reviews
+  and accepts, and the result is persisted as the semantic layer.</p>
+  <div class="meta"><span>50 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers · Datasets</span></div>
+  <p class="note"><b>The pattern: schema archaeology.</b> Compresses a day of squinting at an unfamiliar file into a reviewable draft. Pairs naturally with P10 — have it propose the EPC join strategy, then check whether it was right.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">A7</span><span class="ex-id">NEW</span><h3>Why is this sale weird?</h3></div>
+  <p class="desc">Rules flag a row as implausible; the LLM says <em>why</em> — probable related-party
+  transfer, probable bulk portfolio sale, probable data-entry error, or genuine outlier — using the
+  row's own fields plus neighbourhood statistics, with a one-line human-readable justification
+  attached to each.</p>
+  <div class="meta"><span>45 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note"><b>The pattern: classification with a rationale, at scale.</b> Rules find the odd rows; only a model writes a reason a human accepts. Hand-label a small set first, or you have no idea whether the explanations are right or merely fluent.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">A8</span><span class="ex-id">NEW</span><h3>What if?</h3></div>
+  <p class="desc"><em>"What if rates pushed Camden down 5%, with flats falling twice as fast as
+  houses?"</em> The LLM translates the scenario into <strong>parameters</strong> over a fixed,
+  constrained transformation — not free code — the system applies them, and results render against
+  the unmodified baseline.</p>
+  <div class="meta"><span>50 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note"><b>The pattern: natural language → a bounded parameter space.</b> The model can only fill slots you defined, so a nonsensical scenario produces a rejection rather than arbitrary computation. Contrast it out loud with letting a model write and run code.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">A9</span><span class="ex-id">NEW</span><h3>Ask it out loud</h3></div>
+  <p class="desc">An agent standing in a hallway with a phone asks by voice; speech-to-text through
+  Inference Providers feeds the same pipeline, and the answer comes back as text and a chart.</p>
+  <div class="meta"><span>30 min</span><span class="m-java">Java</span><span>1–2 deploys</span><span class="m-hf">Inference Providers — speech-to-text</span></div>
+  <p class="note">Short, and it reaches a second HF modality (fal, HF Inference and Together all serve speech-to-text). Good filler if a slot runs short, or a stretch goal for whoever finishes early.</p>
+</article>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">A10</span><h3>Comparable sales and a valuation range</h3></div>
+  <p class="desc">An address in; a comparable-sales table, a defensible price range and a short written
+  justification out. Selection rules are visible and relax step by step when evidence is thin, and
+  every figure in the prose traces to a row in the table.</p>
+  <div class="meta"><span>60 min</span><span class="m-java">Java</span><span>3+ deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note"><b>The flagship.</b> A product people pay for, and the clearest demonstration of compute-first-narrate-second: the model's only job is prose over numbers it did not choose.</p>
+</article>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">A11</span><h3>Chart the answer</h3></div>
+  <p class="desc">Results render as the right chart automatically — line, bar or scatter chosen from
+  the shape of the result — with £ formatting, a manual override, and a table plus a stated reason
+  when the data <em>shouldn't</em> be charted at all.</p>
+  <div class="meta"><span>40 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note">Code computes the legal chart types; the LLM only picks one and names the axes, so a bad reply means no chart rather than a broken one. Choosing the chart is easy; <b>refusing is hard</b>, and that's the lesson. Budget time for the rendering — Vega fails silently. Most screenshot-able thing in the material.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">A12</span><h3>The monthly market commentary</h3></div>
+  <p class="desc">Four paragraphs in the house voice, generated from a computed metrics bundle, with
+  every numeral machine-verified against that bundle before the draft can ship and a template fallback
+  when verification fails.</p>
+  <div class="meta"><span>45 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note">The verify step is the build — about thirty lines, and the difference between a feature that gets trusted and one hand-checked every month. Second-order problem worth raising: verified numbers, <em>unverified adjectives</em>.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">A13</span><h3>Ask it from Slack</h3></div>
+  <p class="desc">A bot that answers in the thread where it was asked, posts the chart, keeps the SQL
+  one click away, uses channel context where it's unambiguous, and can't run up a bill.</p>
+  <div class="meta"><span>40 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note">A wrong answer in a public channel gets screenshotted and quoted weeks later with no provenance. Distribution changes the design requirements — which is why "just wrap it in a bot" is usually wrong.</p>
+</article>
+
+<div class="cat"><span class="letter">R</span><h2>Making the AI layer reliable</h2>
+  <p class="sub">Architecture rather than features — how the things in section 2 stop being demos.</p></div>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">R1</span><h3>The semantic layer</h3></div>
+  <p class="desc">Fix the failures no model upgrade will: a dictionary mapping coded columns to
+  synonyms (<code>F</code> → flat, maisonette, apartment) and an embedded index over distinct
+  <code>town</code>/<code>district</code>/<code>county</code> values, resolving place names in the
+  question before the model sees it.</p>
+  <div class="meta"><span>45 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">HF embeddings</span></div>
+  <p class="note">Measured on F1's harness this routinely beats any model upgrade from F2. Most text-to-SQL failure is a data-modelling problem wearing an AI costume.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">R2</span><h3>One-shot → agentic tool-calling loop</h3></div>
+  <p class="desc">Replace the single generation call with an agent holding five tools —
+  <code>listTables</code>, <code>describeTable</code>, <code>sampleValues</code>,
+  <code>runSql</code> (the guarded one), <code>explain</code> — that explores the schema, reads its
+  own errors and retries. Then measure it against one-shot.</p>
+  <div class="meta"><span>50 min</span><span class="m-java">Java</span><span>2–3 deploys</span><span class="m-hf">Inference Providers</span></div>
+  <p class="note">Accuracy usually jumps; latency and cost go up 3–5×. <b>That trade-off table is the lab</b> — "should this be an agent?" becomes a question with an answer.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">R3</span><h3>Semantic query cache</h3></div>
+  <p class="desc">Embed each incoming question and, on a close enough match, reuse the SQL — never the
+  results — skipping the model entirely. Report hit rate, latency saved and cost saved.</p>
+  <div class="meta"><span>35 min</span><span class="m-java">Java</span><span>2 deploys</span><span class="m-hf">HF embeddings</span></div>
+  <p class="note">Ship the naive version first and watch "…in 2015" and "…in 2016" collide into confidently wrong SQL. Nobody forgets a cache that lied to them.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">R4</span><h3>Query observability, published as a dataset</h3></div>
+  <p class="desc">Instrument every question end to end — model, provider, tokens, latency, the SQL,
+  whether it parsed and executed — write the traces to a table, then publish that table as a dataset
+  repo.</p>
+  <div class="meta"><span>40 min</span><span class="m-java">Java</span><span class="m-cli">CLI</span><span>2 deploys</span><span class="m-hf">Datasets</span></div>
+  <p class="note">Closes the loop: production traces become next month's eval set, and the questions that failed in the wild become test cases.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">R5</span><h3>Expose the lakehouse as an MCP tool endpoint</h3></div>
+  <p class="desc">Publish <code>describe_table()</code> and <code>run_query(sql)</code> as MCP tools
+  over the Space's existing port, then point an agent at <code>&lt;space&gt;.hf.space/mcp</code> and
+  ask a question in English.</p>
+  <div class="meta"><span>20 min</span><span class="m-java">Java</span><span>1–2 deploys</span><span class="m-hf">Spaces as a tool endpoint</span></div>
+  <p class="note">The MCP starters are <em>already on the classpath and auto-configuring</em> with zero tools registered — this adds tools to a live server. F1's guard becomes load-bearing once something autonomous writes the SQL.</p>
+</article>
+
+<div class="cat"><span class="letter">H</span><h2>Hugging Face platform</h2>
+  <p class="sub">Kept, as you asked. H1 is mandatory; H2 and H3 are the two you named.</p></div>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">H1</span><h3>Ship the thing</h3></div>
+  <p class="desc">Create a private Docker Space, mount a Hugging Face bucket where the app expects
+  <code>/data</code>, set the token as a secret, push to the Space's git remote, then run
+  Setup&nbsp;→&nbsp;Download&nbsp;→&nbsp;Load and ask the app a question.</p>
+  <div class="meta"><span>30 min</span><span class="m-cli">CLI</span><span>1 deploy</span><span class="m-hf">Spaces · Buckets · secrets</span></div>
+  <p class="note"><b>Mandatory.</b> Everything else assumes a running Space with a year of data in it.</p>
+</article>
+
+<article class="ex star">
+  <div class="ex-head"><span class="ex-id">H2</span><h3>Move the warehouse onto a Hugging Face bucket</h3></div>
+  <p class="desc">Repoint the catalog's warehouse storage profile at an HF Storage Bucket through the
+  <code>s3.hf.co</code> gateway, so the table's Parquet and metadata land on the Hub — with no change
+  to any query code — then browse your own table's files on huggingface.co and open one with
+  <code>pd.read_parquet("hf://buckets/…")</code>.</p>
+  <div class="meta"><span>35 min</span><span class="m-java">Java (config)</span><span>1–2 deploys</span><span class="m-hf">Buckets · S3 API</span><span class="m-warn">now the default — demo, not a lab</span></div>
+  <p class="note"><b>Already done if the Space is bucket-backed</b>, which is the chosen setup — so this is a five-minute explanation rather than an exercise. <b>Proven end to end</b> — table created, rows written by Spark, read back, and the files land as real Parquet that pyarrow opens with nothing Iceberg-aware involved. Not risky any more, but <b>fiddly</b>: four settings must be right and three of them fail with errors pointing elsewhere (a bare 403, a rejected endpoint path, an invalid location). Hand out the recipe rather than letting people discover it.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">H3</span><h3>Publish as a dataset, then compare engines</h3></div>
+  <p class="desc">Export the table to Parquet, publish it as a dataset repo with a card, and get the
+  Dataset Viewer and its SQL console for free. Then time the same question through Spark, DuckDB over
+  the Parquet, and the Hub console.</p>
+  <div class="meta"><span>25 min</span><span class="m-cli">CLI</span><span>0 deploys</span><span class="m-hf">Datasets · viewer · DuckDB</span></div>
+  <p class="note">Ends on an honest finding: for one year on one machine, DuckDB probably wins. Saying so buys credibility the room is otherwise primed to withhold.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">H4</span><h3>Get the ingest off the Space</h3></div>
+  <p class="desc">Move Download and Load out of the HTTP request into a Hugging Face Job with the same
+  bucket mounted, then run the identical job on two hardware flavours and compare wall-clock against
+  total cost.</p>
+  <div class="meta"><span>30 min</span><span class="m-cli">CLI</span><span>0 deploys</span><span class="m-hf">Jobs · scheduled Jobs · webhooks</span></div>
+  <p class="note"><b>No Java at all</b> — the right choice for a tired room. The expensive flavour usually turns out cheaper per job.</p>
+</article>
+
+<article class="ex">
+  <div class="ex-head"><span class="ex-id">H5</span><h3>Dev Mode — edit the running Space</h3></div>
+  <p class="desc">Make the Dockerfile Dev-Mode compatible, then SSH into the live container, change a
+  prompt, hit Refresh and watch it take effect with no rebuild.</p>
+  <div class="meta"><span>20 min</span><span class="m-cli">CLI + Dockerfile</span><span>0 deploys</span><span class="m-hf">Spaces Dev Mode</span><span class="m-warn">PRO only</span></div>
+  <p class="note">The repo isn't compatible yet — making it so <em>is</em> the exercise.</p>
+</article>
+
+<div class="cat"><span class="letter">P</span><h2>Parked — Iceberg internals</h2>
+  <p class="sub">Not deleted, just out of the way.</p></div>
+<div class="tw"><table>
+  <thead><tr><th>ID</th><th>Exercise</th><th>What it is</th><th>Time · hands</th></tr></thead>
+  <tbody>
+    <tr><td class="k">P1</td><td>Time travel &amp; rollback</td><td>Metadata tables, <code>VERSION AS OF</code>, undo a double-load with <code>rollback_to_snapshot</code></td><td class="k">45m · SQL</td></tr>
+    <tr><td class="k">P2</td><td>Write–audit–publish</td><td>Load into a branch, assert five quality rules, fast-forward <code>main</code> only on pass</td><td class="k">50m · SQL+Java</td></tr>
+    <tr><td class="k">P3</td><td>Compaction &amp; retention</td><td>Rewrite data files, expire snapshots, evolve partitions; measure files and latency either side</td><td class="k">40m · SQL</td></tr>
+    <tr><td class="k">P4</td><td>MERGE / CDC upserts</td><td>Idempotent ingestion via <code>MERGE INTO</code>; copy-on-write vs merge-on-read</td><td class="k">45m · SQL+Java</td></tr>
+  </tbody>
+</table></div>
+
+<div class="cat"><span class="letter">P</span><h2>Parked — streaming &amp; multi-engine</h2>
+  <p class="sub">Both need Docker on the laptop; neither service is in the Space image.</p></div>
+<div class="tw"><table>
+  <thead><tr><th>ID</th><th>Exercise</th><th>What it is</th><th>Time · hands</th></tr></thead>
+  <tbody>
+    <tr><td class="k">P5</td><td>Kafka → Iceberg</td><td>Produce synthetic transactions, configure the Iceberg sink, watch snapshots accrue while queries keep serving</td><td class="k">60m · Local</td></tr>
+    <tr><td class="k">P6</td><td>One table, three engines</td><td>Same SQL through Spark and Trino side by side; write from one, read instantly from the other</td><td class="k">35m · Local</td></tr>
+  </tbody>
+</table></div>
+
+<div class="cat"><span class="letter">P</span><h2>Parked — Meridian tickets without an LLM</h2>
+  <p class="sub">Also from the <a href="https://claude.ai/code/artifact/3a8d31cd-3d4c-49ca-887b-8a199b5fccca">Meridian Property Backlog</a>, and good tickets —
+  but the model is not the enabling ingredient, so they are one-liners here rather than cards. Three
+  are prerequisites for section 2; see the note below.</p></div>
+<div class="tw"><table>
+  <thead><tr><th>ID</th><th>Exercise</th><th>What it is</th><th>Time · hands</th></tr></thead>
+  <tbody>
+    <tr><td class="k">P7</td><td>Watchlists and alerts</td><td>Districts on a watchlist, rules evaluated on load, digests that don't fire on noise</td><td class="k">50m · Java</td></tr>
+    <tr><td class="k">P8</td><td>New data → business acts</td><td>Unattended ingest → validate → publish → notify, with a gate that stops bad data</td><td class="k">55m · Java+CLI</td></tr>
+    <tr><td class="k">P9</td><td>Portfolio upload</td><td>CSV of addresses, fuzzy matching with confidence, review queue for the ambiguous 15%</td><td class="k">55m · Java</td></tr>
+    <tr><td class="k">P10</td><td>Price per m²</td><td>Join EPC floor areas onto sales; display coverage honestly</td><td class="k">60m · Java+CLI</td></tr>
+    <tr><td class="k">P11</td><td>Flag bad transactions</td><td>Rule-based flags with reasons; excluded from valuations, never deleted</td><td class="k">40m · SQL+Java</td></tr>
+    <tr><td class="k">P12</td><td>Who's likely to sell</td><td>Transparent lead score, honest that it's a ranking; design the backtest</td><td class="k">45m · SQL+Java</td></tr>
+    <tr><td class="k">P13</td><td>Can I trust this number?</td><td>Freshness, coverage, gaps, last validation — the page that decides adoption</td><td class="k">30m · Java</td></tr>
+    <tr><td class="k">P14</td><td>Repeat-sales index</td><td>Mix-adjusted index alongside the naive average, divergence explained</td><td class="k">60m · SQL+Java</td></tr>
+  </tbody>
+</table></div>
+
+<div class="cat"><span class="letter">P</span><h2>Parked — AI for writing code</h2></div>
+<div class="tw"><table>
+  <thead><tr><th>ID</th><th>Exercise</th><th>What it is</th><th>Time · hands</th></tr></thead>
+  <tbody>
+    <tr><td class="k">P15</td><td>Drive a coding agent</td><td>Implement another exercise with an agentic editor; the subject is how you drive it</td><td class="k">40m · any</td></tr>
+  </tbody>
+</table></div>
+
+<div class="cat"><span class="letter">→</span><h2>Dependencies that cross the line</h2></div>
+<div class="note-box">
+  <span class="l">Three parked tickets are prerequisites</span>
+  <p><strong>A1</strong> (English → alert rule) needs somewhere for the compiled rule to run —
+  that's <strong>P7</strong>'s evaluation loop. <strong>A7</strong> (why is this sale weird)
+  needs <strong>P11</strong>'s flags to have something to explain. <strong>A6</strong> (what
+  even is this file) is much better with <strong>P10</strong>'s EPC file as its subject.</p>
+  <p style="margin-top:.55rem">In each case a thin version is enough — one hardcoded rule, one flag
+  type, one file. Build the stub inside the AI ticket rather than promoting the whole parked ticket
+  back up.</p>
+</div>
+
+<div class="cat"><span class="letter">→</span><h2>Suggested shapes</h2></div>
+<div class="tw"><table>
+  <thead><tr><th>If you want…</th><th>Take</th></tr></thead>
+  <tbody>
+    <tr><td><strong>A four-hour AI-features day</strong></td><td class="k">H1 → F1 → A1 → A2</td></tr>
+    <tr><td>Same, with a Hugging Face spine</td><td class="k">H1 → F1 → A1 → H3</td></tr>
+    <tr><td>The biggest single demo</td><td class="k">A5 (client pack) or A10 (comps)</td></tr>
+    <tr><td>Most transferable pattern per minute</td><td class="k">A1 (LLM as compiler), then A3 (when to ask)</td></tr>
+    <tr><td>Two full days</td><td class="k">F1 → F2 → A1 → A2 → R1 → A5 → R4</td></tr>
+    <tr><td>Lowest risk of stranding people</td><td class="k">H1 · H4 · H3 · A11</td></tr>
+  </tbody>
+</table></div>
+
+<div class="note-box">
+  <span class="l">One structural rule, unchanged</span>
+  <p>Band A is almost entirely Java, so a four-hour day holds <strong>at most two</strong> of those
+  tickets. Pad the other hours with H1, H4 and H3 — all CLI, zero or one deploy — or the room
+  spends the afternoon waiting on each other and on you.</p>
+</div>
+
+<div class="cat"><span class="letter">↺</span><h2>Renumbering key</h2>
+  <p class="sub">If you have notes, slides or handouts against the old <code>Lab</code> /
+  <code>B</code> / <code>PP-</code> numbers, this is the translation. The old numbers are gone
+  from every page — nothing still answers to them.</p></div>
+<div class="renum">
+  <div><span class="o">Lab 1</span><span class="a">→</span><span class="n">F1</span></div>
+  <div><span class="o">Lab 2</span><span class="a">→</span><span class="n">F2</span></div>
+  <div><span class="o">PP-114</span><span class="a">→</span><span class="n">A1</span></div>
+  <div><span class="o">PP-113</span><span class="a">→</span><span class="n">A2</span></div>
+  <div><span class="o">PP-115</span><span class="a">→</span><span class="n">A3</span></div>
+  <div><span class="o">PP-116</span><span class="a">→</span><span class="n">A4</span></div>
+  <div><span class="o">PP-117</span><span class="a">→</span><span class="n">A5</span></div>
+  <div><span class="o">PP-118</span><span class="a">→</span><span class="n">A6</span></div>
+  <div><span class="o">PP-119</span><span class="a">→</span><span class="n">A7</span></div>
+  <div><span class="o">PP-120</span><span class="a">→</span><span class="n">A8</span></div>
+  <div><span class="o">PP-121</span><span class="a">→</span><span class="n">A9</span></div>
+  <div><span class="o">PP-102</span><span class="a">→</span><span class="n">A10</span></div>
+  <div><span class="o">B11</span><span class="a">→</span><span class="n">A11</span></div>
+  <div><span class="o">PP-101</span><span class="a">→</span><span class="n">A11</span></div>
+  <div><span class="o">PP-107</span><span class="a">→</span><span class="n">A12</span></div>
+  <div><span class="o">PP-110</span><span class="a">→</span><span class="n">A13</span></div>
+  <div><span class="o">B8</span><span class="a">→</span><span class="n">R1</span></div>
+  <div><span class="o">B7</span><span class="a">→</span><span class="n">R2</span></div>
+  <div><span class="o">B9</span><span class="a">→</span><span class="n">R3</span></div>
+  <div><span class="o">B10</span><span class="a">→</span><span class="n">R4</span></div>
+  <div><span class="o">Lab 6</span><span class="a">→</span><span class="n">R5</span></div>
+  <div><span class="o">Lab 0</span><span class="a">→</span><span class="n">H1</span></div>
+  <div><span class="o">Lab 3</span><span class="a">→</span><span class="n">H2</span></div>
+  <div><span class="o">Lab 5</span><span class="a">→</span><span class="n">H3</span></div>
+  <div><span class="o">Lab 4</span><span class="a">→</span><span class="n">H4</span></div>
+  <div><span class="o">Alt finale</span><span class="a">→</span><span class="n">H5</span></div>
+  <div><span class="o">B1</span><span class="a">→</span><span class="n">P1</span></div>
+  <div><span class="o">B2</span><span class="a">→</span><span class="n">P2</span></div>
+  <div><span class="o">B3</span><span class="a">→</span><span class="n">P3</span></div>
+  <div><span class="o">B4</span><span class="a">→</span><span class="n">P4</span></div>
+  <div><span class="o">B5</span><span class="a">→</span><span class="n">P5</span></div>
+  <div><span class="o">B6</span><span class="a">→</span><span class="n">P6</span></div>
+  <div><span class="o">PP-103</span><span class="a">→</span><span class="n">P7</span></div>
+  <div><span class="o">PP-104</span><span class="a">→</span><span class="n">P8</span></div>
+  <div><span class="o">PP-105</span><span class="a">→</span><span class="n">P9</span></div>
+  <div><span class="o">PP-106</span><span class="a">→</span><span class="n">P10</span></div>
+  <div><span class="o">PP-108</span><span class="a">→</span><span class="n">P11</span></div>
+  <div><span class="o">PP-109</span><span class="a">→</span><span class="n">P12</span></div>
+  <div><span class="o">PP-111</span><span class="a">→</span><span class="n">P13</span></div>
+  <div><span class="o">PP-112</span><span class="a">→</span><span class="n">P14</span></div>
+  <div><span class="o">B12</span><span class="a">→</span><span class="n">P15</span></div>
+</div>
+<p style="font-size:.9rem;color:var(--muted);max-width:44rem">
+<code>B11</code> and <code>PP-101</code> were always the same exercise — chart the result, in two
+framings — so both fold into <strong>A11</strong>. That is why 41 entries became 40.</p>
+
+</div>

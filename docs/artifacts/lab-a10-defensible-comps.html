@@ -1,0 +1,365 @@
+<title>A10 · Defensible Comps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+
+<style>
+  :root {
+    --ground:#FAF9FC; --surface:#FFFFFF; --sunk:#F1EFF5; --term:#F4F2F8;
+    --ink:#17141F; --muted:#5A5370; --faint:#837B99; --rule:#E3DFEB;
+    --accent:#C96A05; --accent-soft:#FBEEDC;
+    --code:#5646CE; --code-soft:#EDEAFB;
+    --pass:#1F6B4A; --pass-soft:#DFF0E7;
+    --fail:#A3341F; --fail-soft:#F8E4DF;
+    --shadow:0 1px 2px rgba(23,20,31,.05), 0 10px 30px -22px rgba(23,20,31,.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --term:#0A0810;
+      --ink:#EDEAF4; --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+      --accent:#FFB44D; --accent-soft:#2B1E0E;
+      --code:#A594FF; --code-soft:#1D1836;
+      --pass:#5FC492; --pass-soft:#10241B;
+      --fail:#F08A6E; --fail-soft:#2B1310;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --term:#0A0810;
+    --ink:#EDEAF4; --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+    --accent:#FFB44D; --accent-soft:#2B1E0E;
+    --code:#A594FF; --code-soft:#1D1836;
+    --pass:#5FC492; --pass-soft:#10241B;
+    --fail:#F08A6E; --fail-soft:#2B1310;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink); margin: 0;
+    font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 58rem; margin: 0 auto; padding: clamp(2rem,5vw,3.5rem) clamp(1rem,4vw,2.5rem) 6rem; }
+
+  .masthead { border-bottom: 3px double var(--rule); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 .8rem;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(2rem,5vw,3rem); line-height: 1.02; letter-spacing: -.025em;
+    margin: 0 0 .8rem; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.08rem; color: var(--muted); max-width: 40rem; margin: 0; }
+
+  p { margin: 0 0 1rem; max-width: 44rem; }
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--code); outline-offset: 3px; }
+
+  code {
+    font-family: "JetBrains Mono", monospace; font-size: .82em;
+    background: var(--code-soft); color: var(--code);
+    border-radius: 3px; padding: .08em .32em;
+  }
+  pre {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; line-height: 1.65;
+    background: var(--term); border: 1px solid var(--rule); border-left: 3px solid var(--code);
+    border-radius: 4px; padding: .85rem 1rem; overflow-x: auto; margin: 0 0 1rem;
+    color: var(--ink);
+  }
+  pre code { background: none; color: inherit; padding: 0; font-size: 1em; }
+  pre .c { color: var(--faint); }
+
+  /* part headings */
+  .part {
+    display: flex; align-items: baseline; gap: .9rem; flex-wrap: wrap;
+    margin: 3.5rem 0 .4rem; border-top: 2px solid var(--ink); padding-top: 1rem;
+  }
+  .part .n {
+    font-family: "JetBrains Mono", monospace; font-size: .7rem; font-weight: 700;
+    letter-spacing: .18em; color: var(--accent); text-transform: uppercase;
+  }
+  .part h2 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.55rem;
+    letter-spacing: -.018em; margin: 0; text-wrap: balance;
+  }
+  .part .mins {
+    font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--faint);
+    margin-left: auto;
+  }
+  .part + p { margin-top: .9rem; }
+
+  /* a numbered step */
+  .step { display: grid; grid-template-columns: 3.2rem 1fr; gap: 0 1rem; margin: 1.8rem 0; }
+  .step > .sn {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; font-weight: 700;
+    color: var(--accent); padding-top: .18rem; letter-spacing: .04em;
+  }
+  .step > .sb > :last-child { margin-bottom: 0; }
+  .step h3 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.08rem;
+    margin: 0 0 .5rem; letter-spacing: -.008em; line-height: 1.3;
+  }
+  @media (max-width: 34rem) { .step { grid-template-columns: 1fr; gap: .3rem; } }
+
+  /* boxes */
+  .box { border-radius: 0 5px 5px 0; padding: .85rem 1.05rem; margin: 1rem 0; max-width: 44rem; }
+  .box p:last-child { margin-bottom: 0; }
+  .box .l {
+    font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .14em;
+    text-transform: uppercase; display: block; margin-bottom: .4rem; font-weight: 700;
+  }
+  .task   { background: var(--accent-soft); border-left: 3px solid var(--accent); }
+  .task .l   { color: var(--accent); }
+  .think  { background: var(--code-soft); border-left: 3px solid var(--code); }
+  .think .l  { color: var(--code); }
+  .warn   { background: var(--fail-soft); border-left: 3px solid var(--fail); }
+  .warn .l   { color: var(--fail); }
+
+  .think ol { margin: .3rem 0 0; padding-left: 1.15rem; }
+  .think li { margin-bottom: .55rem; }
+  .think li:last-child { margin-bottom: 0; }
+  .task ul { margin: .3rem 0 0; padding-left: 1.15rem; }
+  .task li { margin-bottom: .35rem; }
+
+  /* tables */
+  .tw { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .9rem; min-width: 22rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: "JetBrains Mono", monospace; font-size: .61rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); font-weight: 500;
+    border-bottom: 2px solid var(--ink); white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td code { font-size: .78rem; }
+  td.n { font-family: "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--faint); }
+
+  .v {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; font-weight: 700;
+    letter-spacing: .08em; padding: .15rem .45rem; border-radius: 3px; white-space: nowrap;
+  }
+  .v-run  { background: var(--fail-soft); color: var(--fail); border: 1px solid var(--fail); }
+  .v-stop { background: var(--pass-soft); color: var(--pass); border: 1px solid var(--pass); }
+  .v-none { background: var(--sunk); color: var(--faint); border: 1px solid var(--rule); }
+
+  .file {
+    font-family: "JetBrains Mono", monospace; font-size: .74rem;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 4px;
+    padding: .5rem .7rem; margin: 0 0 .8rem; display: block; color: var(--muted);
+    overflow-x: auto; white-space: nowrap;
+  }
+  .file b { color: var(--ink); font-weight: 700; }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">Lab A10 · Meridian ticket · 60 minutes · you write the code</p>
+  <h1>Give me comps I can defend</h1>
+  <p class="standfirst">An address in; comparable sales, a valuation range, and a written
+  justification out — where every number in the prose traces to a row in the table.</p>
+</header>
+
+<div class="box think">
+  <span class="l">The ticket · Marcus, valuing property for lenders</span>
+  <p><em>"I'm valuing 14 Acacia Road, SW11. I need the comparable sales and a range I'd be willing to
+  put in front of a lender. Right now I'm doing this by hand and it takes forty minutes a
+  property."</em></p>
+</div>
+
+<div class="box warn">
+  <span class="l">The one rule that makes this lab worth an hour</span>
+  <p><strong>Compute first, narrate second.</strong> Your code selects the comparables and computes
+  the range. The model's <em>only</em> job is to write the paragraph — it must never produce a number
+  that is not already in your table.</p>
+  <p style="margin-top:.55rem">Get that ordering wrong and you have built something that invents
+  valuations for lenders. Get it right and you have the single most reusable pattern in the whole
+  workshop.</p>
+</div>
+
+<div class="part"><span class="n">Part 1</span><h2>Comparable selection is policy, not a query</h2><span class="mins">10 min</span></div>
+
+<div class="step">
+  <div class="sn">1.1</div>
+  <div class="sb">
+    <h3>Pick a real subject property</h3>
+    <p>Use the app or <strong>Sample rows</strong> to find one, and write down its
+    <code>postcode</code>, <code>district</code>, <code>property_type</code>, <code>duration</code>
+    and <code>date_of_transfer</code>. That row is your subject; everything else is evidence.</p>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">1.2</div>
+  <div class="sb">
+    <h3>Write the strict rule first, in SQL, by hand</h3>
+    <p>Before any code, run this in the SQL box and see how many rows you get:</p>
+<pre><code>SELECT price, date_of_transfer, paon, street, postcode
+FROM lakekeeper.housing.staging_prices
+WHERE district      = '&lt;subject district&gt;'
+  AND property_type = '&lt;subject type&gt;'
+  AND duration      = '&lt;subject tenure&gt;'
+  AND date_of_transfer &gt;= '2015-01-01'
+ORDER BY date_of_transfer DESC</code></pre>
+    <div class="box think">
+      <span class="l">Notice what just happened</span>
+      <p>Depending on the property you picked, you got plenty — or almost nothing. <strong>That is
+      the entire feature.</strong> Comparable selection is a business rule with consequences, and
+      the rule that is right for a terraced house in Leeds is wrong for a detached house in a village
+      with four sales a year.</p>
+    </div>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 2</span><h2>The degradation ladder</h2><span class="mins">15 min</span></div>
+
+<div class="step">
+  <div class="sn">2.1</div>
+  <div class="sb">
+    <h3>Decide the ladder before you write it</h3>
+    <p>When strict does not find enough evidence, relax <strong>one rung at a time</strong>, and
+    <strong>record which rung you are on</strong>. A defensible suggestion:</p>
+    <div class="tw"><table>
+      <thead><tr><th>Rung</th><th>Relax</th><th>Still holds</th></tr></thead>
+      <tbody>
+        <tr><td class="n">0</td><td>nothing — same district, type, tenure, 12 months</td><td>everything</td></tr>
+        <tr><td class="n">1</td><td>widen to 24 months</td><td>district, type, tenure</td></tr>
+        <tr><td class="n">2</td><td>widen to the county</td><td>type, tenure</td></tr>
+        <tr><td class="n">3</td><td>drop tenure</td><td>type</td></tr>
+        <tr><td class="n">—</td><td colspan="2"><strong>Stop.</strong> Fewer than 5 comps after rung 3 is <em>"insufficient comparable evidence"</em>, not a wider search</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">2.2</div>
+  <div class="sb">
+    <h3>Build it</h3>
+    <span class="file">new file · src/main/java/dev/prpatel/iceberg/app/<b>CompsService.java</b></span>
+<pre><code>public record Comps(
+        List&lt;Row&gt; rows,
+        int rungUsed,
+        String rungDescription,   <span class="c">// "same district and type, widened to 24 months"</span>
+        boolean sufficient) {}
+
+<span class="c">// Walk the ladder. Stop at the first rung with >= 5 rows. Cap at 15.</span>
+<span class="c">// Return sufficient=false rather than a wider search.</span></code></pre>
+    <div class="box task">
+      <span class="l">Two things to get right</span>
+      <ul>
+        <li><strong>Between 5 and 15.</strong> Two sales is not evidence; two hundred is not
+        comparable. Both ends matter</li>
+        <li><strong>Carry the rung out with the rows.</strong> "Which rule produced this?" is the
+        question a lender asks, and you cannot answer it later if you did not record it</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 3</span><h2>A range, not a number</h2><span class="mins">10 min</span></div>
+
+<div class="step">
+  <div class="sn">3.1</div>
+  <div class="sb">
+    <h3>Choose your statistic, and be able to defend it</h3>
+    <p>You have between 5 and 15 prices. Turning them into a range is a <strong>decision</strong>,
+    not a formula you look up:</p>
+    <div class="tw"><table>
+      <thead><tr><th>Option</th><th>Argument against it</th></tr></thead>
+      <tbody>
+        <tr><td>min to max</td><td>one odd sale drags the whole range open</td></tr>
+        <tr><td>interquartile range</td><td>honest, but with 6 comps the quartiles are two data points</td></tr>
+        <tr><td>trimmed mean ± spread</td><td>needs you to justify what you trimmed and why</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box think">
+      <span class="l">Write down which you chose and why</span>
+      <p>This is the part a lender will actually challenge. "The tool said so" is not an answer, and
+      whichever you pick, <strong>the number of comparables has to be visible next to the range</strong>
+      — a range from 6 sales and a range from 15 are not the same claim.</p>
+    </div>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 4</span><h2>Narrate — and only narrate</h2><span class="mins">15 min</span></div>
+
+<div class="step">
+  <div class="sn">4.1</div>
+  <div class="sb">
+    <h3>The model gets facts, not a question</h3>
+    <p>By now everything is computed. The prompt hands the model the finished numbers and asks for
+    prose:</p>
+    <div class="box task">
+      <span class="l">Give it</span>
+      <ul>
+        <li>the subject property</li>
+        <li>the comparable rows, as data</li>
+        <li>the range you computed, and the count behind it</li>
+        <li>the rung description — <em>"widened to 24 months to find enough evidence"</em></li>
+      </ul>
+    </div>
+    <div class="box warn">
+      <span class="l">And tell it, explicitly</span>
+      <p><strong>Use only the numbers provided. Do not compute, estimate or round anything.</strong>
+      If a figure is not in the data given, it must not appear in the paragraph.</p>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="sn">4.2</div>
+  <div class="sb">
+    <h3>Then verify it, in code</h3>
+    <p>Instructions are not a guarantee — F2 part 2.3 showed you a model ignoring a contract
+    outright. So check:</p>
+<pre><code><span class="c">// pull every number out of the generated prose and assert each one</span>
+<span class="c">// appears in the comps, the range, or the count</span>
+Pattern.compile("£?[0-9][0-9,]*")</code></pre>
+    <div class="box think">
+      <span class="l">Then decide what to do when it fails</span>
+      <p>Reject and retry? Show the paragraph with the invented figure flagged? Fall back to the
+      table alone? <strong>There is no right answer</strong> — but a valuation tool that quietly
+      passes through a number it made up is the worst of the three, and that is the one you get by
+      not deciding.</p>
+    </div>
+  </div>
+</div>
+
+<div class="part"><span class="n">Part 5</span><h2>Break it on purpose</h2><span class="mins">10 min</span></div>
+
+<div class="step">
+  <div class="sn">5.1</div>
+  <div class="sb">
+    <h3>Find a property with almost no comparables</h3>
+    <p>A rare property type in a thin district. Run your feature against it.</p>
+    <div class="box think">
+      <span class="l">The three questions</span>
+      <ol>
+        <li>Did it say <strong>"insufficient comparable evidence"</strong> — or did it produce a
+        confident range from three sales?</li>
+        <li>Is the <strong>relaxation visible</strong> to Marcus, or did it silently widen until it
+        found something?</li>
+        <li>Would <strong>you</strong> put the output in front of a lender?</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<div class="part"><span class="n">—</span><h2>Done when</h2><span class="mins">—</span></div>
+
+<div class="tw"><table>
+  <tbody>
+    <tr><td>Between 5 and 15 comparables, or an explicit refusal — never a confident answer from two sales</td></tr>
+    <tr><td>The selection rule is shown, <strong>including any relaxation</strong></td></tr>
+    <tr><td>A range, with the number of comparables behind it visible</td></tr>
+    <tr><td>Every figure in the prose traces to a row — and you check it in code rather than trusting the prompt</td></tr>
+  </tbody>
+</table></div>
+
+</div>
