@@ -346,7 +346,7 @@ docker run -d --name big-data-ai \
 |-------|--------|
 | `docker build` from a clean context | **passes**, exit 0, 1.14 GB image |
 | Base image drift — `eclipse-temurin:21-jre` | now Ubuntu 26.04 "resolute"; `postgresql-18` (18.6) still in main, so the Dockerfile's assumption holds |
-| Pinned tags still published | MinIO `RELEASE.2025-09-07T16-13-09Z` ✓ · LakeKeeper `v0.10.2` ✓ — both with arm64 |
+| Pinned tags still published | MinIO `RELEASE.2025-09-07T16-13-09Z` ✓ · LakeKeeper `v0.13.3` ✓ — both with arm64 |
 | Apple Silicon | builds and runs **native aarch64**, no emulation |
 | Container startup | app, LakeKeeper and MinIO all answer 200; Spring Boot up in ~2 s after the services |
 | Setup Environment | ✅ bucket · ✅ bootstrap · ✅ warehouse |
@@ -501,14 +501,32 @@ data stored on the Hub.
 Attendees deploy by **pushing to the Space's git remote**, which is also the dev loop they will
 use for the rest of the day: edit locally, commit, push, watch it build.
 
+> **This path is proven end to end on a bucket-backed Space.** Setup registers the warehouse,
+> `Load Data` writes 1,011,752 rows as real Parquet into a Hugging Face bucket in about 30 seconds,
+> and an English question comes back answered. Everything below is what that took.
+
+### Before anything: the token
+
+One token does all of it. **Grant it Full Access** — it is one click, and every fine-grained
+combination we tried cost more time than it saved.
+
+If you insist on fine-grained, it needs all three or something later fails in a way that does not
+name the cause:
+
+- **Make calls to Inference Providers** — without it, `Generate Query` returns a 500 hiding
+  `403 "does not have sufficient permissions to call Inference Providers on behalf of user <you>"`
+- **Write access to repos** — creating the Space and pushing to it
+- **Write access to buckets** — read alone authenticates perfectly and then refuses every upload
+
 ```bash
 # 1. Get the code
 git clone <workshop-repo-url> big-data-ai && cd big-data-ai
+hf auth login --add-to-git-credential          # paste the token; also lets git push over HTTPS
 
 # 2. Your own Space — Docker SDK, private
 hf repos create <you>/big-data-ai --type space --sdk docker --private
 
-# 3. TWO buckets. They are not the same kind of thing — see the note below.
+# 3. TWO buckets. They are not the same kind of thing — see below.
 hf buckets create <you>/lakehouse --private     # files: CSVs + the catalog dump
 hf buckets create <you>/warehouse --private     # Iceberg data + metadata
 
@@ -519,7 +537,7 @@ hf spaces volumes set <you>/big-data-ai -v hf://buckets/<you>/lakehouse:/data
 #    hf.co/settings/tokens -> your token's ... menu -> Generate S3 credentials
 #    You get an access key starting HFAK... and a secret shown exactly once.
 
-# 5. Tell the app where the warehouse lives, and how to sign for it
+# 5. Tell the app where the warehouse lives and how to sign for it
 hf spaces variables add <you>/big-data-ai \
   -e APP_S3_ENDPOINT=https://s3.hf.co \
   -e APP_S3_BUCKET=<you> \
@@ -534,8 +552,9 @@ hf spaces secrets add <you>/big-data-ai \
   -s APP_S3_ACCESS_KEY=HFAK... \
   -s APP_S3_SECRET_KEY=...
 
+# NOTE: do NOT set APP_AI_BILL_TO. See "Billing" below.
+
 # 6. Push. This is what triggers the build.
-hf auth login --add-to-git-credential          # so git can authenticate over HTTPS
 git remote add hf https://huggingface.co/spaces/<you>/big-data-ai
 git push --force hf main
 
@@ -543,6 +562,24 @@ git push --force hf main
 hf spaces logs <you>/big-data-ai --build --follow
 hf spaces wait <you>/big-data-ai
 ```
+
+Then at `https://<you>-big-data-ai.hf.space/admin`: **Setup Environment** → **Download Data**
+(`2015`) → **Load Data** (`2015`). Then ask the home page a question.
+
+### Billing — the one thing that differs between you and them
+
+`APP_AI_BILL_TO` sends `X-HF-Bill-To`, which bills inference to an **organisation** instead of to
+the account the token belongs to. Both settings fail identically when wrong — a 500 hiding a 403
+that reads like a broken token.
+
+| Who | `APP_AI_BILL_TO` |
+|-----|------------------|
+| An attendee on credits granted to their own account | **unset** — the router bills the token's owner, which is them |
+| A Space in an org, where the token's inference permission sits on the org | `<org-name>` |
+
+If you are testing the attendee path from your own personal account, **leave it unset**. If you
+deploy into an org and skip it, every query fails with *"on behalf of user &lt;you&gt;"* — because
+without the header the router bills you personally, and your permission is on the org.
 
 ### The two buckets, because this is the confusing part
 
@@ -554,7 +591,7 @@ hf spaces wait <you>/big-data-ai
 
 **Do not mount the warehouse bucket.** The app never resolves a filesystem path to it. It asks
 LakeKeeper where the table is, and LakeKeeper answers from the storage profile that **Setup
-Environment** registers — endpoint, bucket, key-prefix, credentials.
+Environment** registers.
 
 **`APP_S3_BUCKET` is your namespace, not your bucket.** HF buckets are addressed
 `namespace/bucket`, S3 will not take a `/` inside a bucket name, and LakeKeeper rejects an endpoint
@@ -565,48 +602,42 @@ into `APP_S3_KEY_PREFIX`. Get these two the wrong way round and the error will n
 
 - **`--force` on the first push is expected, not a mistake.** `hf repos create` initialises the Space
   with its own README commit, so your local `main` has unrelated history. The Space is seconds old
-  and empty; force-push it. (The alternative,
-  `git pull hf main --allow-unrelated-histories`, means resolving a README conflict in front of the
-  room — do that only if you enjoy it.)
+  and empty; force-push it.
 - **The README's YAML frontmatter is the Space's config.** `sdk: docker` is what makes it build the
-  Dockerfile, and the app listens on 7860, which is HF's default `app_port`, so no override is
-  needed. If someone's Space builds and then 404s, that frontmatter is the first place to look.
-- **`data/` is gitignored** and `.gitattributes` already carries the standard HF LFS rules, so the
-  push is a couple of hundred kilobytes. Nobody should ever commit a `pp-YYYY.csv`.
-
-Prefer SSH? `git remote add hf git@hf.co:spaces/<you>/big-data-ai` works once their key is at
-[hf.co/settings/keys](https://huggingface.co/settings/keys), and skips the credential-helper step.
-
-Then, at `https://<you>-big-data-ai.hf.space/admin`: **Setup Environment** → **Download Data**
-(`2015`) → **Load Data** (`2015`). Then ask the home page a question.
+  Dockerfile, and the app listens on 7860, which is HF's default `app_port`. If someone's Space
+  builds and then 404s, that frontmatter is the first place to look.
+- **`data/` is gitignored** and `.gitattributes` carries the standard HF LFS rules, so the push is a
+  couple of hundred kilobytes. Nobody should ever commit a `pp-YYYY.csv`.
 
 **What they learn** Docker Spaces are just a Dockerfile and a port; secrets vs. variables; a bucket
 volume is how a Space gets state that survives a restart; that a catalog stores *where* a table is,
-which is why the same query works against MinIO locally and the Hub in production; the Hub page is
-an iframe wrapper, so `/admin` lives on the `hf.space` subdomain.
+which is why the same query works against MinIO locally and the Hub in production.
 
 **Talking point while builds run** Walk through `SETUP_FLOW.md` — the three admin buttons and what
 each touches. This is dead time otherwise; use it.
 
-### Traps to pre-empt — all four have actually happened
+### Traps to pre-empt — every one of these actually happened
 
 - **The admin buttons always answer *"… operation initiated"*** whether or not the work succeeded.
   `AdminController` adds that message unconditionally, before the service call returns. Teach
   `hf spaces logs <space> --follow` in the first ten minutes; they will need it all day.
-- **Setup can fail on the warehouse step alone**, having already created the bucket reference and
-  bootstrapped the project. The log line to look for is `✅ Warehouse created successfully`. A
-  failure looks like:
-  `400 {"error":{"message":"IO Operation failed during Validation: ... Unknown S3 error during write:
-  unhandled error (InternalError) at s3://<you>/warehouse/.../metadata/test"}}`
-- **That error is about credentials, not the gateway.** LakeKeeper validates a new warehouse by
-  writing a probe object with *its own* S3 client, so `APP_S3_CLIENT_SIDE_SIGNING` — which only
-  affects Spark — cannot help. We hit this with a freshly generated key and fixed it by swapping in
-  a known-working one; we did not isolate whether the cause was propagation delay or token scope. If
-  it happens, re-generate the credentials, restart, and click Setup again — it is idempotent, and
-  re-running only retries the step that failed.
-- **A private Space needs a session.** The browser is fine once they are logged in to HF, but
-  anything scripted against `https://<you>-big-data-ai.hf.space` needs
+- **Setup is idempotent and self-healing — say so.** If a variable was wrong, fix it and click Setup
+  again. It updates the existing warehouse's storage profile in place and logs
+  `✅ Warehouse already existed; storage profile updated`. It did not always do this, and the failure
+  mode was invisible: the stale profile survived every later Setup.
+- **Do not try to fix a Space by deleting `lakekeeper-catalog.sql`.** The catalog dumper rewrites it
+  within `PG_DUMP_INTERVAL` (60s) while the app is running, so the deletion silently undoes itself.
+  Click Setup instead.
+- **A warehouse-creation 400 is about credentials, not the gateway.** LakeKeeper validates by writing
+  a probe object with its own S3 client, so it fails before Spark is ever involved:
+  `IO Operation failed during Validation ... Unknown S3 error during write ... InternalError`.
+  Re-generate the S3 credentials and click Setup again.
+- **A private Space needs a session.** The browser is fine once they are logged in to HF, but anything
+  scripted against `https://<you>-big-data-ai.hf.space` needs
   `-H "Authorization: Bearer $(hf auth token)"`, or it returns a 404 that looks like a broken deploy.
+- **`Generate Query` returning a 500** is almost always the token: either it lacks *Make calls to
+  Inference Providers*, or `APP_AI_BILL_TO` is set when it should not be (or the reverse). The real
+  error is in the logs, never on the page.
 
 ## F1 — Make the analyst trustworthy (40 min)
 
