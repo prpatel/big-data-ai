@@ -505,6 +505,12 @@ hf spaces variables add <you>/big-data-ai \
   -e APP_S3_CLIENT_SIDE_SIGNING=true \
   -e APP_WAREHOUSE_EXPLICIT_LOCATION=false
 
+# CHECK before pushing. All seven, or the Space silently comes up on MinIO instead:
+# the entrypoint decides purely from APP_S3_ENDPOINT, and unset falls into the same
+# branch as localhost. Nothing errors - the build succeeds and the warehouse is just
+# in the wrong place.
+hf spaces variables ls <you>/big-data-ai
+
 hf spaces secrets add <you>/big-data-ai \
   -s HF_TOKEN=hf_xxx \
   -s APP_S3_ACCESS_KEY=HFAK... \
@@ -519,6 +525,11 @@ git push --force hf main
 # 7. Watch it build, then wait for it to come up
 hf spaces logs <you>/big-data-ai --build --follow
 hf spaces wait <you>/big-data-ai
+
+# 8. CHECK it came up bucket-backed. This one line is the proof:
+hf spaces logs <you>/big-data-ai | grep EMBEDDED_MINIO
+#   [init] EMBEDDED_MINIO=0; the warehouse lives in external storage (https://s3.hf.co)
+# No such line means MinIO, however healthy everything else looks.
 ```
 
 Then at `https://<you>-big-data-ai.hf.space/admin`: **Setup Environment** → **Download Data**
