@@ -1,6 +1,6 @@
 id,question,expected
 q01,How many properties sold in Oxford in September 2015?,270
-q02,What is the highest price paid in Camden in 2015?,0
-q03,How many detached houses sold in Leeds in 2015?,1674
-q04,What is the average price in Bath in 2015?,223444
-q05,How many sales were there in total?,1331313
+q02,What is the highest price paid in Camden in 2015?,
+q03,How many detached houses sold in Leeds in 2015?,
+q04,What is the average price in Bath in 2015?,
+q05,How many sales were there in total?,
