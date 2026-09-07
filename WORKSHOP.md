@@ -51,7 +51,7 @@ matters. No organisation is involved.
 
 ```bash
 curl -LsSf https://hf.co/cli/install.sh | bash -s
-hf auth login --token hf_xxx --add-to-git-credential     # paste the token; also lets git push
+hf auth login --token hf_xxx --add-to-git-credential   # --token required: browser login ignores the flag
 hf auth whoami                            # confirms which account the token belongs to
 ```
 
@@ -479,7 +479,6 @@ name the cause:
 ```bash
 # 1. Get the code
 git clone https://github.com/prpatel/big-data-ai big-data-ai && cd big-data-ai
-hf auth login --token hf_xxx --add-to-git-credential   # a no-op if they did the pre-work
 
 # 2. Your own Space — Docker SDK, private
 hf repos create <you>/big-data-ai --repo-type space --sdk docker --private --flavor cpu-upgrade
