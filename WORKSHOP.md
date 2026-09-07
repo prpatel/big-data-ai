@@ -457,7 +457,7 @@ Attendees deploy by **pushing to the Space's git remote**, which is also the dev
 use for the rest of the day: edit locally, commit, push, watch it build.
 
 > **This path is proven end to end on a bucket-backed Space.** Setup registers the warehouse,
-> `Load Data` writes 1,011,752 rows as real Parquet into a Hugging Face bucket in about 30 seconds,
+> `Load Data` writes about 1.01 million rows as real Parquet into a Hugging Face bucket in about 30 seconds,
 > and an English question comes back answered. Everything below is what that took.
 
 ### Before anything: the token
@@ -600,7 +600,7 @@ this into the **SQL** box and press **Run Query**:
 SELECT COUNT(*) FROM lakekeeper.housing.staging_prices
 ```
 
-You should get roughly **1,011,752**. If you get `0`, the load did not work — read the runtime log
+You should get roughly **1.01 million**. If you get `0`, the load did not work — read the runtime log
 rather than clicking Load again.
 
 Now type a question in your own words and press **Generate Query**, then **Run Query**. That is the

@@ -5,8 +5,14 @@
 # Needs only curl and the hf CLI - no Java, no Maven, no Python. It talks to a deployed
 # Space over HTTP, which is the same thing a person using the app talks to.
 #
-#   ./scripts/eval.sh <you>/big-data-ai            # uses scripts/questions.csv
+#   ./scripts/eval.sh <you>/big-data-ai                        # scripts/questions.csv
+#   ./scripts/eval.sh <you>/big-data-ai scripts/answers.csv    # pre-filled, to skip ahead
 #   ./scripts/eval.sh <you>/big-data-ai my.csv
+#
+# questions.csv ships with one answer filled in and the rest blank on purpose - deriving them
+# is the exercise. answers.csv has all five, for anyone who wants to get to F2 without doing
+# that first. Its numbers were derived against a 2015 load on 2026-09-07; the Land Registry
+# reissues the file, so counts can move by a few rows between downloads.
 #
 # Four cumulative gates per question, in this order:
 #
