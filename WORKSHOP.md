@@ -655,37 +655,116 @@ each touches. This is dead time otherwise; use it.
 
 ## F1 — Make the analyst trustworthy (40 min)
 
-The highest-value lab. `AiService.generateQuery()` as written is a realistic first draft with
-realistic problems, and the attendees get to find them.
+The keystone lab. Three defects that were exercises in an earlier draft are now **already fixed in
+the code they clone**, because attacking a working guard teaches more in forty minutes than building
+one does — and because a room of twenty-five cannot all get a parser-based guard working before the
+break.
 
-Hand them the code and this question: **what could go wrong here?**
+| Already built | Where | What it does |
+|---|---|---|
+| `SqlGuard` | `app/SqlGuard.java` | parses the statement, rejects anything that is not a single read, caps rows |
+| `SchemaStore` | `app/SchemaStore.java` | reads columns from the catalog with `DESCRIBE TABLE`, cached |
+| `SqlAnswer` | `app/SqlAnswer.java` | the model returns JSON — `sql`, `columns_used`, `assumptions` |
 
-```java
-Dataset<Row> resultsDF = spark.sql(generatedsql);   // HomeController, straight from the LLM
+Open `HomeController.runquery` and read it before anything else. **The interesting thing is that the
+SQL is a form field.** `generatedsql` is a POST parameter — the generated query lands in an editable
+textarea and whatever comes back gets executed. No prompt injection required.
+
+### Exercise 1 — break the guard (15 min)
+
+Type SQL straight into the box and press Run. Everything below has been tried; the point is to find
+out *why* each answer is what it is.
+
+| Attempt | What happens |
+|---|---|
+| `DROP TABLE lakekeeper.housing.staging_prices` | rejected — *would modify the warehouse (DropTable)* |
+| `SELECT 1; DROP TABLE …` | rejected — fails to **parse**, so no second statement exists |
+| `INSERT INTO … SELECT` | rejected — *that statement writes* |
+| `MERGE INTO` / `DELETE FROM` | rejected |
+| `CALL lakekeeper.system.rollback_to_snapshot(…)` | rejected — but with `NoClassDefFoundError`, not a parse failure |
+| `WITH x AS (SELECT …) SELECT * FROM x` | **runs** — a CTE is still a read |
+| `SELECT/**/town FROM …` | **runs** — comments do not change what the parser sees |
+
+**The debrief is the last three rows.** A regex guard would have rejected the CTE and been fooled by
+the comment; the parser gets both right, because it is asking Spark what the text *means* rather
+than what it looks like. And the `CALL` case is why `SqlGuard` catches `Throwable` rather than
+`Exception`: Iceberg's extended parser reaches for a Scala class that is not on the runtime
+classpath and throws an `Error`. For a guard, "could not confidently parse this" and "will not run
+it" are the same answer, whatever was thrown.
+
+**The lesson, said out loud:** the model was never the vulnerability. An editable field that reaches
+`spark.sql()` is.
+
+### Exercise 2 — where a row limit belongs (10 min)
+
+There is a **Rows to return** field next to the query box. Try 3, 7, then 500.
+
+| Where you could put a limit | What happens |
+|---|---|
+| In the system prompt | the model complies *sometimes* — this project has the git history to prove it |
+| At render time | `formatDataSet(df, n)` truncates, but `df.count()` already scanned everything |
+| `.limit(n)` in the plan | actually bounds the work — what `SqlGuard` does |
+
+500 comes back as 200: the per-query field is clamped by `app.sql.max-rows`. A user-supplied bound
+still needs a bound.
+
+### Exercise 3 — the deliverable: an eval set (20 min)
+
+Everyone in the room has shipped an LLM feature with no way to tell whether a prompt change helped.
+This is the smallest thing that fixes that, and F2 pays them back for it within the hour.
+
+**The file** — `src/test/resources/eval/questions.csv`:
+
+```csv
+id,question,check_type,expected
+q01,How many properties sold in Oxford in September 2015?,scalar,270
+q02,What was the most expensive sale in Camden in 2015?,scalar,4750000
+q03,Show me all flats sold in Bath,shape,property_type
+q04,Average price by town in Surrey,shape,GROUP BY
+q05,Which is the cheapest terraced house in Leeds?,scalar,42000
 ```
 
-The list they should reach:
+| `check_type` | Compares | Why it exists |
+|---|---|---|
+| `scalar` | the single value returned | unambiguous, no opinion about SQL style |
+| `shape` | a substring the generated SQL must contain | catches "right answer, wrong reason" |
+| `rowcount` | number of rows | for "show me all X" questions |
 
-| Defect | Exercise |
-|--------|----------|
-| Model output goes to `spark.sql()` unvalidated — `DROP TABLE` is one prompt injection away | Add a guard that parses the statement and rejects anything that isn't a single `SELECT`. Spark's `ParserInterface` gives you a real parse tree; a regex does not. |
-| Schema is a hardcoded string in `AiService.fieldsInData` — it silently rots the moment the table changes | Read the schema from the catalog at runtime (`spark.catalog`/`DESCRIBE TABLE`) and cache it |
-| No `LIMIT`, and results render 100 rows regardless | Inject a `LIMIT` when the model omits one |
-| Response may arrive fenced in ```` ```sql ```` — sometimes | Ask for **structured output** (JSON schema: `{sql, columns_used, assumptions}`) instead of stripping fences forever |
-| Nothing measures whether any of this got better | ↓ |
+**Where the expected answers come from — attendees always stall here.** They do not invent them.
+They *derive* them: run the query by hand in the box, read the answer, record it. Writing the ten
+questions **is** the exercise, because it forces them to decide what "correct" means. `q01` above is
+real — 270 is what the Oxford query returns against 2015.
 
-**Then the actual deliverable: a ten-question eval set.**
+**The runner** — `src/test/java/.../EvalHarnessTest.java`, and this skeleton is enough:
 
-Ten questions with a known-correct answer — an expected row count, an expected aggregate, or an
-expected shape (`GROUP BY town`, filters on `date_of_transfer`). A tiny runner that fires all ten
-and scores: *generated?* · *parses?* · *executes?* · *right answer?* Plus latency per question.
+```java
+@ParameterizedTest
+@CsvFileSource(resources = "/eval/questions.csv", numLinesToSkip = 1)
+void evaluates(String id, String question, String checkType, String expected) {
+    long t0 = System.currentTimeMillis();
+    String sql = aiService.generateAnswer(question).sql();      // generated?
+    long latency = System.currentTimeMillis() - t0;
 
-Make it boring and text-based — a CSV of questions and a JUnit test or a shell loop is enough. The
-point is that it exists.
+    var plan = spark.sessionState().sqlParser().parsePlan(sql);  // parses?
+    Dataset<Row> result = spark.sql(sql);                        // executes?
 
-**Why this is the best lab in the workshop** Everyone in the room has shipped an LLM feature with
-no way to tell whether a prompt change helped. They leave with the smallest thing that fixes that,
-and F2 immediately pays them back for building it.
+    switch (checkType) {                                          // right answer?
+        case "scalar"   -> assertThat(result.first().get(0).toString()).isEqualTo(expected);
+        case "rowcount" -> assertThat(result.count()).isEqualTo(Long.parseLong(expected));
+        case "shape"    -> assertThat(sql.toUpperCase()).contains(expected.toUpperCase());
+    }
+    System.out.printf("%s  %5d ms  %s%n", id, latency, checkType);
+}
+```
+
+**The four gates are cumulative, and the order is the point:** *generated? → parses? → executes? →
+right answer?* A model scoring 10/10/10/3 has a completely different problem from one scoring
+10/4/4/4, and the lab only lands if they can see which.
+
+**Two things to say before they start.** Ten questions is ten inference calls per run, on their own
+credits — tell them to start with five. And **run it twice on the same model**: the scores will
+differ. That non-determinism is the thing most of the room has never actually measured, and the
+debrief question is *"how many runs before you would believe a prompt change helped?"*
 
 **Useful anywhere** ✅ entirely portable · **Better on HF** ✅ the model swap in F2 is one string
 
@@ -693,20 +772,34 @@ and F2 immediately pays them back for building it.
 
 ## F2 — Model bake-off on Inference Providers (30 min)
 
-Now the eval harness earns its keep. **Start by making the model a runtime parameter — this is the first half of the lab.** The model
-is currently pinned in `application.properties` and baked into the `ChatClient` at construction, so
-comparing four models the obvious way costs four deploys. One push fixes that: have
-`AiService.generateQuery()` take a model name and set it per call, then expose it on the page next
-to the question box.
+Now the eval harness earns its keep — and **there is no code to write first.** The model is already
+a runtime setting: the **Model Picker** at the bottom of `/admin` swaps it per request, with six
+models across six providers preloaded and an **OTHER** box for any `model:provider` string.
 
 ```java
-chatClient.prompt()
-    .options(OpenAiChatOptions.builder().model(modelId).build())   // per-request override
-    .system(systemPrompt).user(userPrompt).call().chatResponse();
+// AiService, already in the code they cloned
+String model = modelStore.get();                                   // whatever /admin is set to
+OpenAiChatOptions.Builder perRequest = OpenAiChatOptions.builder().model(model);
 ```
 
-After that push, **the entire bake-off runs with no further deploys** — and the eval harness from
-F1 can loop over all four models in a single run instead of being run four times.
+| Preloaded | Provider |
+|---|---|
+| `Qwen/Qwen3.6-27B` | ovhcloud |
+| `Qwen/Qwen3.6-35B-A3B` | scaleway |
+| `Qwen/Qwen3-Coder-Next` | novita |
+| `openai/gpt-oss-120b` | groq |
+| `google/gemma-3-27b-it` | deepinfra |
+| `google/gemma-3-1b-it` | featherless-ai |
+
+So the bake-off is: **set the picker, run F1's harness, write down the four scores and the latency,
+repeat.** No deploys at all — which is the point, because at ~90 s a deploy, doing this the obvious
+way would eat the hour.
+
+Two things worth watching for, both real. `reasoning_effort` is not portable: `none` is fine on some
+providers and returns `400: must be one of low, medium, or high` on others, so `AiService` drops it
+and retries once rather than making the room care. And the 1B model is in the list deliberately —
+it is the one most likely to ignore the JSON contract and hand back bare SQL, which is exactly the
+failure F1's structured output makes visible.
 
 > Don't reach for Space variables here. `SPRING_AI_OPENAI_CHAT_MODEL` does bind onto
 > `spring.ai.openai.chat.model` via relaxed binding, but changing a variable puts the Space through
