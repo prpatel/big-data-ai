@@ -43,6 +43,7 @@ data/
 .env
 .env.*
 !.env.example
+!.env.local.example
 
 # LibreOffice/OpenOffice lock files, created while a csv is open in a spreadsheet
 .~lock.*#
