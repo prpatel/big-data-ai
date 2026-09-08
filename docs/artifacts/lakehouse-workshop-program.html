@@ -344,13 +344,13 @@
   <div class="schedule">
     <div class="slot"><span class="t">0:00 – 0:15</span><span class="n">Intro <span>— and everyone starts their Space build, which runs while you talk</span></span><span class="b b-none">setup</span></div>
     <div class="slot"><span class="t">0:15 – 0:45</span><span class="n">H1 <span>— Ship the thing</span></span><span class="b b-core">core</span></div>
-    <div class="slot"><span class="t">0:45 – 1:25</span><span class="n">F1 <span>— Make the analyst trustworthy</span></span><span class="b b-core">core</span></div>
-    <div class="slot"><span class="t">1:25 – 1:35</span><span class="n">Break</span><span class="b b-none"></span></div>
-    <div class="slot"><span class="t">1:35 – 2:05</span><span class="n">F2 <span>— Model bake-off</span></span><span class="b b-core">core</span></div>
-    <div class="slot"><span class="t">2:05 – 2:10</span><span class="n">H2 <span>— Where the data actually lives</span></span><span class="b b-none">demo</span></div>
-    <div class="slot"><span class="t">2:10 – 2:40</span><span class="n">A11 <span>— Don't make me read a table</span></span><span class="b b-core">core</span></div>
+    <div class="slot"><span class="t">0:45 – 0:50</span><span class="n">H2 <span>— Where the data actually lives</span></span><span class="b b-none">demo</span></div>
+    <div class="slot"><span class="t">0:50 – 1:30</span><span class="n">F1 <span>— Make the analyst trustworthy</span></span><span class="b b-core">core</span></div>
+    <div class="slot"><span class="t">1:30 – 1:40</span><span class="n">Break</span><span class="b b-none"></span></div>
+    <div class="slot"><span class="t">1:40 – 2:10</span><span class="n">F2 <span>— Model bake-off</span></span><span class="b b-core">core</span></div>
+    <div class="slot"><span class="t">2:10 – 2:40</span><span class="n">A11 <span>— Don&#39;t make me read a table</span></span><span class="b b-core">core</span></div>
     <div class="slot"><span class="t">2:40 – 2:50</span><span class="n">Break</span><span class="b b-none"></span></div>
-    <div class="slot"><span class="t">2:50 – 3:30</span><span class="n">H4, 5 <span>or</span> 6 <span>— Jobs · Publish &amp; engine shootout · MCP</span></span><span class="b b-pick">pick one</span></div>
+    <div class="slot"><span class="t">2:50 – 3:30</span><span class="n">H4, H3 <span>or</span> R5 <span>— Jobs · Publish &amp; engine shootout · MCP</span></span><span class="b b-pick">pick one</span></div>
     <div class="slot"><span class="t">3:30 – 3:50</span><span class="n">Demos <span>— every Space added to a shared Collection</span></span><span class="b b-none"></span></div>
     <div class="slot"><span class="t">3:50 – 4:00</span><span class="n">Wrap</span><span class="b b-none"></span></div>
   </div>
@@ -462,6 +462,77 @@ hf spaces logs &lt;you&gt;/big-data-ai | grep EMBEDDED_MINIO
       <span class="chip hot"><b>Better on HF</b> push-to-deploy — the build runs server-side, so nobody runs <code>docker build</code> on venue wifi</span>
     </div>
   </article>
+  <article class="lab">
+    <div class="lab-head">
+      <span class="lab-no">H2 · demo, not a lab</span><span class="lab-dur">5 min</span>
+      <h3 class="lab-title">Where the data actually lives</h3>
+    </div>
+    <p><strong>Run this straight after H1</strong>, while attendees still remember typing the
+    <code>APP_S3_*</code> secrets &mdash; this is the explanation of what those secrets did. It also
+    leaves F1 &rarr; F2 &rarr; A11 as one unbroken arc rather than splitting it with an
+    infrastructure aside.</p>
+    <p>An Iceberg catalog knows <em>where</em> your table is; it does not care <em>whose</em> object
+    store that is. Attendees have been proving that since the first load — on a bucket-backed Space
+    the warehouse is on a Hugging Face bucket from the start, so there is nothing to move. Show it
+    rather than build it.</p>
+    <p><strong>Open their own bucket page</strong> at
+    <code>huggingface.co/buckets/&lt;you&gt;/warehouse</code>, expand Iceberg's
+    <code>metadata/</code> and <code>data/</code> directories, and open one Parquet file with
+    <code>pd.read_parquet("hf://buckets/…")</code> — nothing Iceberg-aware in the path. Then say what
+    would be sitting there if MinIO were in the way: <code>&lt;name&gt;.parquet/xl.meta</code>
+    directories that no other tool can read. That contrast is the whole point.</p>
+    <p>This is the warehouse registration their setup click already posted, and it is worth putting on
+    screen because three of its fields are counter-intuitive:</p>
+<pre><code>"storage-profile": {
+  "type": "s3",
+  "bucket": "&lt;your-namespace&gt;",   <span class="c">// the NAMESPACE, not the bucket</span>
+  "key-prefix": "warehouse",      <span class="c">// the bucket name goes here</span>
+  "endpoint": "https://s3.hf.co", <span class="c">// no path - LakeKeeper rejects one</span>
+  "region": "us-east-1",
+  "path-style-access": true,
+  "flavor": "s3-compat",
+  "sts-enabled": false
+}</code></pre>
+    <h3>Four gateway differences that are the actual lesson</h3>
+    <ul>
+      <li><strong>No STS</strong>, so LakeKeeper hands out the access key rather than vending
+      temporary credentials — a two-minute aside on why credential vending exists at all.</li>
+      <li><strong>Path-style addressing is mandatory.</strong> Virtual-host style fails with
+      “could not resolve hostname”, which looks like DNS and isn't.</li>
+      <li><strong>The namespace becomes the S3 bucket.</strong> HF buckets are
+      <code>namespace/bucket</code>, S3 won't take a <code>/</code> in a bucket name, and LakeKeeper
+      won't take a path in the endpoint — so the real bucket name slides down into
+      <code>key-prefix</code>.</li>
+      <li><strong>ListObjectsV2 only</strong>; no versioning, ACLs, <code>UploadPartCopy</code>, or
+      <code>x-amz-meta-*</code>. “S3-compatible” is a spectrum, and reading the compatibility notes
+      before adopting a store is the professional lesson underneath the demo.</li>
+    </ul>
+    <div class="note">
+      <span class="l">Why this stopped being a lab</span>
+      <p>It was a 35-minute exercise while MinIO was the default and moving off it was the exciting
+      part. With bucket-backed Spaces the move happens before anyone arrives, so the payoff changed
+      from <em>watch it move</em> to <em>look where it already is</em>. Keep the recipe below to hand:
+      it is what you would walk through if you ever put attendees back on MinIO, and it is the
+      troubleshooting sheet if someone's bucket setup misbehaves.</p>
+      <p style="margin-top:.55rem"><strong>1. AWS SDK ≥ 2.5x with <code>apache-client</code>
+      declared.</strong> This was the real blocker: Iceberg 1.9.2 on a 2024-era SDK produced a bare
+      <code>403</code> with an empty body. <code>S3FileIO</code> still builds an
+      <code>ApacheHttpClient</code>, and from the 2.5x line that artifact is no longer transitive —
+      omit it and every call dies with <code>ClassNotFoundException</code>.</p>
+      <p style="margin-top:.55rem"><strong>2. The endpoint may not have a path.</strong> LakeKeeper
+      refuses it, so the HF <em>namespace</em> becomes the S3 bucket and the bucket name becomes
+      <code>key-prefix</code>.</p>
+      <p style="margin-top:.55rem"><strong>3. No explicit <code>LOCATION</code>.</strong> With a REST
+      catalog the server places the table; anything else is rejected as an invalid location.</p>
+      <p style="margin-top:.55rem"><strong>4. A token with read <em>and</em> write.</strong> Read
+      alone authenticates perfectly and then refuses every <code>PutObject</code> with a bare
+      <code>AccessDenied … Unknown</code>. <strong>Make the pre-flight a write, not a list.</strong></p>
+    </div>
+    <div class="chips">
+      <span class="chip"><b>Useful anywhere</b> ✓ catalog/storage separation is the core Iceberg idea</span>
+      <span class="chip hot"><b>Better on HF</b> ✓✓ the warehouse is a browsable, permissioned Hub page</span>
+    </div>
+  </article>
 
   <article class="lab">
     <div class="lab-head">
@@ -562,73 +633,6 @@ hf models list --inference-provider groq --warm</code></pre>
     </div>
   </article>
 
-  <article class="lab">
-    <div class="lab-head">
-      <span class="lab-no">H2 · demo, not a lab</span><span class="lab-dur">5 min</span>
-      <h3 class="lab-title">Where the data actually lives</h3>
-    </div>
-    <p>An Iceberg catalog knows <em>where</em> your table is; it does not care <em>whose</em> object
-    store that is. Attendees have been proving that since the first load — on a bucket-backed Space
-    the warehouse is on a Hugging Face bucket from the start, so there is nothing to move. Show it
-    rather than build it.</p>
-    <p><strong>Open their own bucket page</strong> at
-    <code>huggingface.co/buckets/&lt;you&gt;/warehouse</code>, expand Iceberg's
-    <code>metadata/</code> and <code>data/</code> directories, and open one Parquet file with
-    <code>pd.read_parquet("hf://buckets/…")</code> — nothing Iceberg-aware in the path. Then say what
-    would be sitting there if MinIO were in the way: <code>&lt;name&gt;.parquet/xl.meta</code>
-    directories that no other tool can read. That contrast is the whole point.</p>
-    <p>This is the warehouse registration their setup click already posted, and it is worth putting on
-    screen because three of its fields are counter-intuitive:</p>
-<pre><code>"storage-profile": {
-  "type": "s3",
-  "bucket": "&lt;your-namespace&gt;",   <span class="c">// the NAMESPACE, not the bucket</span>
-  "key-prefix": "warehouse",      <span class="c">// the bucket name goes here</span>
-  "endpoint": "https://s3.hf.co", <span class="c">// no path - LakeKeeper rejects one</span>
-  "region": "us-east-1",
-  "path-style-access": true,
-  "flavor": "s3-compat",
-  "sts-enabled": false
-}</code></pre>
-    <h3>Four gateway differences that are the actual lesson</h3>
-    <ul>
-      <li><strong>No STS</strong>, so LakeKeeper hands out the access key rather than vending
-      temporary credentials — a two-minute aside on why credential vending exists at all.</li>
-      <li><strong>Path-style addressing is mandatory.</strong> Virtual-host style fails with
-      “could not resolve hostname”, which looks like DNS and isn't.</li>
-      <li><strong>The namespace becomes the S3 bucket.</strong> HF buckets are
-      <code>namespace/bucket</code>, S3 won't take a <code>/</code> in a bucket name, and LakeKeeper
-      won't take a path in the endpoint — so the real bucket name slides down into
-      <code>key-prefix</code>.</li>
-      <li><strong>ListObjectsV2 only</strong>; no versioning, ACLs, <code>UploadPartCopy</code>, or
-      <code>x-amz-meta-*</code>. “S3-compatible” is a spectrum, and reading the compatibility notes
-      before adopting a store is the professional lesson underneath the demo.</li>
-    </ul>
-    <div class="note">
-      <span class="l">Why this stopped being a lab</span>
-      <p>It was a 35-minute exercise while MinIO was the default and moving off it was the exciting
-      part. With bucket-backed Spaces the move happens before anyone arrives, so the payoff changed
-      from <em>watch it move</em> to <em>look where it already is</em>. Keep the recipe below to hand:
-      it is what you would walk through if you ever put attendees back on MinIO, and it is the
-      troubleshooting sheet if someone's bucket setup misbehaves.</p>
-      <p style="margin-top:.55rem"><strong>1. AWS SDK ≥ 2.5x with <code>apache-client</code>
-      declared.</strong> This was the real blocker: Iceberg 1.9.2 on a 2024-era SDK produced a bare
-      <code>403</code> with an empty body. <code>S3FileIO</code> still builds an
-      <code>ApacheHttpClient</code>, and from the 2.5x line that artifact is no longer transitive —
-      omit it and every call dies with <code>ClassNotFoundException</code>.</p>
-      <p style="margin-top:.55rem"><strong>2. The endpoint may not have a path.</strong> LakeKeeper
-      refuses it, so the HF <em>namespace</em> becomes the S3 bucket and the bucket name becomes
-      <code>key-prefix</code>.</p>
-      <p style="margin-top:.55rem"><strong>3. No explicit <code>LOCATION</code>.</strong> With a REST
-      catalog the server places the table; anything else is rejected as an invalid location.</p>
-      <p style="margin-top:.55rem"><strong>4. A token with read <em>and</em> write.</strong> Read
-      alone authenticates perfectly and then refuses every <code>PutObject</code> with a bare
-      <code>AccessDenied … Unknown</code>. <strong>Make the pre-flight a write, not a list.</strong></p>
-    </div>
-    <div class="chips">
-      <span class="chip"><b>Useful anywhere</b> ✓ catalog/storage separation is the core Iceberg idea</span>
-      <span class="chip hot"><b>Better on HF</b> ✓✓ the warehouse is a browsable, permissioned Hub page</span>
-    </div>
-  </article>
 
   <article class="lab">
     <div class="lab-head">

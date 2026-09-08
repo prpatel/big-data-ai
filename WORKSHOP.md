@@ -141,22 +141,30 @@ two people, because everything bills by the minute and idles at zero.
 
 ## Timeline
 
-The spine is Labs 0–3. Everything after is chosen live based on how the room is doing.
+The spine is **H1, F1, F2 and A11**. Everything after is chosen live based on how the room is doing.
 
 | Time | Block |
 |------|-------|
 | 0:00 – 0:15 | Intro: what a lakehouse is, what the app does, **start your Space build now** (it builds while you talk) |
 | 0:15 – 0:45 | **H1** — Ship the thing |
-| 0:45 – 1:25 | **F1** — Make the analyst trustworthy |
-| 1:25 – 1:35 | Break |
-| 1:35 – 2:05 | **F2** — Model bake-off |
-| 2:05 – 2:40 | **H2** — Move the warehouse onto Hugging Face |
+| 0:45 – 0:50 | **H2** — Where the data actually lives (demo from the stage) |
+| 0:50 – 1:30 | **F1** — Make the analyst trustworthy |
+| 1:30 – 1:40 | Break |
+| 1:40 – 2:10 | **F2** — Model bake-off |
+| 2:10 – 2:40 | **A11** — Don't make me read a table |
 | 2:40 – 2:50 | Break |
 | 2:50 – 3:30 | **Pick one:** H4 (Jobs) · H3 (Publish + engine shootout) · R5 (MCP) |
 | 3:30 – 3:50 | Demos: everyone's Space added to a shared Collection |
 | 3:50 – 4:00 | Wrap, where to go next |
 
-**Running only 3 hours?** Do 0, 1, 2 and demo H2 from the stage. F1 is the one that must
+**H2 sits right after H1 on purpose.** Attendees type the `APP_S3_*` secrets during H1, and H2 is
+the explanation of what those secrets did — it lands while they still remember typing them, and it
+leaves F1 → F2 → A11 as one unbroken arc.
+
+**A11 is written up in [`WORKSHOP-FEATURE-LABS.md`](WORKSHOP-FEATURE-LABS.md), not here** — it has
+its own step-by-step build guide, linked from that section.
+
+**Running only 3 hours?** Do H1, F1 and F2, and demo H2 from the stage. F1 is the one that must
 not be cut — it's the reason technical people came.
 
 ---
@@ -683,6 +691,70 @@ each touches. This is dead time otherwise; use it.
   Inference Providers*, or `APP_AI_BILL_TO` is set when it should not be (or the reverse). The real
   error is in the logs, never on the page.
 
+## H2 — Move the warehouse onto Hugging Face (5 min explanation, not a lab)
+
+> **You chose bucket-backed Spaces, so this is already done** before anyone arrives — the warehouse
+> is on a Hugging Face bucket from the first load. Run it straight after H1, while attendees still
+> remember typing the `APP_S3_*` secrets — this is the explanation of what those secrets did:
+> show the bucket page, open a Parquet file, and explain what would be there instead if MinIO
+> were in the path (`<name>.parquet/xl.meta` directories nothing else can read). The mechanics below
+> are what you would walk through, and what to fall back on if you switch attendees to MinIO and
+> want it hands-on again.
+
+**Verified end to end on 2026-09-05.** An Iceberg catalog knows *where* your table is; it doesn't
+care whose object store that is. Cut MinIO out, put the data files in a Hugging Face bucket, and
+change no query code.
+
+```bash
+hf buckets create <you>/warehouse --private
+```
+
+Then hf.co/settings/tokens → your token's ⋯ menu → **Generate S3 credentials** → an access key
+starting `HFAK…` and a secret shown once. Configure the app:
+
+```properties
+app.s3.endpoint=https://s3.hf.co
+app.s3.bucket=<your-namespace>       # the NAMESPACE, not the bucket - see below
+app.s3.key-prefix=warehouse          # the bucket name goes here
+app.s3.access-key=HFAK...
+app.s3.secret-key=...
+app.s3.sts-enabled=false
+app.s3.create-bucket=false
+app.s3.client-side-signing=true
+app.warehouse.explicit-location=false
+```
+
+Reload a year, then open `https://huggingface.co/buckets/<you>/warehouse` and watch Iceberg's
+`metadata/` and `data/` directories appear — as **real Parquet**, openable with
+`pd.read_parquet("hf://buckets/…")`. That moment is the one people photograph, and it is the
+difference between "the bytes are on the Hub" and "the data is on the Hub".
+
+### Four things that must all be right
+
+Each of the last three fails with an error pointing somewhere else entirely, which is why this lab
+needs the recipe above rather than discovery:
+
+| # | Requirement | What it looks like when wrong |
+|---|-------------|-------------------------------|
+| 1 | **AWS SDK ≥ 2.5x** with `apache-client` on the classpath | `403` with an empty body, or `ClassNotFoundException: ApacheHttpClient$Builder`. Iceberg 1.9.2 against a 2024-era SDK is the root cause; `S3FileIO` still builds an `ApacheHttpClient`, and that artifact stopped being transitive |
+| 2 | **Endpoint with no path** | `Storage Profile 'endpoint' must not have a path`. HF buckets are `namespace/bucket` and S3 clients won't take a `/` in a bucket name, so the namespace becomes the S3 bucket and the bucket name becomes `key-prefix` |
+| 3 | **No explicit `LOCATION`** | `Invalid location 's3://…'`. With a REST catalog the server places the table |
+| 4 | **Token with read *and* write** on repo contents | `AccessDenied … Unknown` on `PutObject`, after a perfectly successful authentication. Read alone is not enough, and the S3 error names no permission |
+
+> **Pre-flight, and make it a `PutObject`.** A `ListObjects` check passes with a read-only token and
+> tells you nothing. Have attendees run an actual write before the lab.
+
+### Why it is worth doing
+
+Without this, the Space's MinIO stores objects under `${DATA_ROOT}/minio`, and `DATA_ROOT` is
+already a Hugging Face bucket. So the data is on the Hub — as `…parquet/xl.meta` directories plus
+opaque `part.1` files that only MinIO can read. Nothing else can open them: not pandas, not DuckDB,
+not another Job, not the Hub's own file preview. Removing MinIO removes a translation layer that
+sits between object storage and object storage, and turns the same bytes into something every tool
+in the ecosystem understands.
+
+---
+
 ## F1 — Make the analyst trustworthy (40 min)
 
 > **Work through this on your own.** Every step says what to type, what you should see, and what to
@@ -1004,69 +1076,6 @@ bills to your own credits, so there is nothing shared to exhaust.
 
 **Useful anywhere** ✅ · **Better on HF** ✅✅ one token, one base URL, ~20 providers, no per-vendor
 signup — this comparison is a week of procurement anywhere else
-
----
-
-## H2 — Move the warehouse onto Hugging Face (5 min explanation, not a lab)
-
-> **You chose bucket-backed Spaces, so this is already done** before anyone arrives — the warehouse
-> is on a Hugging Face bucket from the first load. Keep it as a short explanation at the top of an
-> hour: show the bucket page, open a Parquet file, and explain what would be there instead if MinIO
-> were in the path (`<name>.parquet/xl.meta` directories nothing else can read). The mechanics below
-> are what you would walk through, and what to fall back on if you switch attendees to MinIO and
-> want it hands-on again.
-
-**Verified end to end on 2026-09-05.** An Iceberg catalog knows *where* your table is; it doesn't
-care whose object store that is. Cut MinIO out, put the data files in a Hugging Face bucket, and
-change no query code.
-
-```bash
-hf buckets create <you>/warehouse --private
-```
-
-Then hf.co/settings/tokens → your token's ⋯ menu → **Generate S3 credentials** → an access key
-starting `HFAK…` and a secret shown once. Configure the app:
-
-```properties
-app.s3.endpoint=https://s3.hf.co
-app.s3.bucket=<your-namespace>       # the NAMESPACE, not the bucket - see below
-app.s3.key-prefix=warehouse          # the bucket name goes here
-app.s3.access-key=HFAK...
-app.s3.secret-key=...
-app.s3.sts-enabled=false
-app.s3.create-bucket=false
-app.s3.client-side-signing=true
-app.warehouse.explicit-location=false
-```
-
-Reload a year, then open `https://huggingface.co/buckets/<you>/warehouse` and watch Iceberg's
-`metadata/` and `data/` directories appear — as **real Parquet**, openable with
-`pd.read_parquet("hf://buckets/…")`. That moment is the one people photograph, and it is the
-difference between "the bytes are on the Hub" and "the data is on the Hub".
-
-### Four things that must all be right
-
-Each of the last three fails with an error pointing somewhere else entirely, which is why this lab
-needs the recipe above rather than discovery:
-
-| # | Requirement | What it looks like when wrong |
-|---|-------------|-------------------------------|
-| 1 | **AWS SDK ≥ 2.5x** with `apache-client` on the classpath | `403` with an empty body, or `ClassNotFoundException: ApacheHttpClient$Builder`. Iceberg 1.9.2 against a 2024-era SDK is the root cause; `S3FileIO` still builds an `ApacheHttpClient`, and that artifact stopped being transitive |
-| 2 | **Endpoint with no path** | `Storage Profile 'endpoint' must not have a path`. HF buckets are `namespace/bucket` and S3 clients won't take a `/` in a bucket name, so the namespace becomes the S3 bucket and the bucket name becomes `key-prefix` |
-| 3 | **No explicit `LOCATION`** | `Invalid location 's3://…'`. With a REST catalog the server places the table |
-| 4 | **Token with read *and* write** on repo contents | `AccessDenied … Unknown` on `PutObject`, after a perfectly successful authentication. Read alone is not enough, and the S3 error names no permission |
-
-> **Pre-flight, and make it a `PutObject`.** A `ListObjects` check passes with a read-only token and
-> tells you nothing. Have attendees run an actual write before the lab.
-
-### Why it is worth doing
-
-Without this, the Space's MinIO stores objects under `${DATA_ROOT}/minio`, and `DATA_ROOT` is
-already a Hugging Face bucket. So the data is on the Hub — as `…parquet/xl.meta` directories plus
-opaque `part.1` files that only MinIO can read. Nothing else can open them: not pandas, not DuckDB,
-not another Job, not the Hub's own file preview. Removing MinIO removes a translation layer that
-sits between object storage and object storage, and turns the same bytes into something every tool
-in the ecosystem understands.
 
 ## H4 — Get the ingest off the Space (30 min)
 
