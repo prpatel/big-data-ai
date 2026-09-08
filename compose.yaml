@@ -118,6 +118,14 @@ services:
       - ${DATA_ROOT:-./data}:/app/data
     environment:
       - HF_TOKEN=${HF_TOKEN}
+      # Point the analyst at any OpenAI-compatible endpoint. Unset, it uses the HF router.
+      # For a model running on the host, host.docker.internal is how the container reaches it.
+      # Bare names, not NAME=${NAME:-}: the latter sets the variable to an empty string when
+      # it is unset on the host, and an empty value beats the default in application.properties
+      # rather than falling back to it. This form passes them only when they actually exist.
+      - APP_AI_BASE_URL
+      - APP_AI_API_KEY
+      - APP_AI_MODEL
       # The services below are already running as sibling containers, so the image's
       # entrypoint must not start its own copies - it just execs the jar. The app then
       # falls back to the compose service names baked into application.properties.
