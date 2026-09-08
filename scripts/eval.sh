@@ -23,11 +23,22 @@
 # A run that scores 10/10/3 has a completely different problem from one scoring 10/4/4.
 set -uo pipefail
 
-SPACE="${1:?usage: eval.sh <owner>/<space> [questions.csv]}"
+SPACE="${1:?usage: eval.sh <owner>/<space>|<url> [questions.csv]}"
 CSV="${2:-scripts/questions.csv}"
-HOST="https://$(echo "$SPACE" | tr '/' '-').hf.space"
-TOKEN="$(hf auth token 2>/dev/null | tr -d '[:space:]')"
-AUTH=(-H "Authorization: Bearer ${TOKEN}")
+
+# Accept either a Space (owner/name) or a full URL, so the same harness scores a local
+# container and a deployed Space. Working offline should not mean losing the eval set.
+if [[ "$SPACE" == http://* || "$SPACE" == https://* ]]; then
+    HOST="${SPACE%/}"
+    # A local container needs no bearer token. The array still has to hold something:
+    # this script runs under `set -u`, and on bash 3.2 - which is what macOS ships -
+    # expanding an empty array counts as an unbound variable and aborts every request.
+    AUTH=(-H "X-Eval-Source: local")
+else
+    HOST="https://$(echo "$SPACE" | tr '/' '-').hf.space"
+    TOKEN="$(hf auth token 2>/dev/null | tr -d '[:space:]')"
+    AUTH=(-H "Authorization: Bearer ${TOKEN}")
+fi
 
 [[ -f "$CSV" ]] || { echo "no such file: $CSV" >&2; exit 1; }
 
