@@ -37,18 +37,30 @@ Hugging Face Inference Providers, which needs a token in `.env`:
 HF_TOKEN=hf_...
 ```
 
-The endpoint itself is set in `src/main/resources/application.properties`:
+The defaults live in `src/main/resources/application.properties`, and each one reads an
+environment variable first:
 
-| Property | Value |
-|----------|-------|
-| `spring.ai.openai.base-url` | `https://router.huggingface.co/v1` |
-| `spring.ai.openai.chat.model` | `Qwen/Qwen3.6-27B:ovhcloud` |
-| `spring.ai.openai.chat.custom-headers.X-HF-Bill-To` | `pratik-org` |
+| Property | Environment variable | Default |
+|----------|----------------------|---------|
+| `spring.ai.openai.base-url` | `APP_AI_BASE_URL` | `https://router.huggingface.co/v1` |
+| `spring.ai.openai.api-key` | `APP_AI_API_KEY` | `$HF_TOKEN` |
+| `spring.ai.openai.chat.model` | `APP_AI_MODEL` | `Qwen/Qwen3-Coder-Next:novita` |
+| `app.ai.bill-to` | `APP_AI_BILL_TO` | empty (bill the personal account) |
 
-That file also carries a commented-out block for a local OpenAI-compatible inference
-server. To use it, move the comment markers for the **whole block**, not just the
-base-url: the two servers take different thinking parameters, and the HF router returns
-400 if it is sent the local server's. The `X-HF-Bill-To` header is HF-specific as well.
+**To use a model running on your own machine** — which makes everything except dataset
+publishing work with no network — copy `.env.local.example` to `.env.local` and fill in the
+three `APP_AI_*` values. It is git-ignored and layered on top of `.env`.
+
+Two things to know when you change them:
+
+- **Recreate, don't restart.** These bind at startup, and `docker compose restart` reuses the
+  container's original environment. Use `./local-build-deploy.sh -r`.
+- **Clear the model override.** The model picker persists a choice to `data/config/model.txt`
+  which outranks the configured default and survives restarts. `curl -X POST
+  http://localhost:7860/admin/model/reset`, or delete the file.
+
+One setting does not travel by environment: `app.ai.use-chat-template-kwargs` suppresses
+thinking on servers that honour it, and the HF router returns 400 if it is sent.
 
 Without a working endpoint the app still starts and everything except **Generate Query**
 works.

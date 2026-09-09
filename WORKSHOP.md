@@ -47,7 +47,21 @@ workshop — a token missing one box authenticates perfectly and then fails with
 Everything lives in the attendee's **own namespace**, so only the *User permissions* section
 matters. No organisation is involved.
 
-**2. Install the CLI and log in:**
+**2. Install the CLI and log in.** The installer needs **Python 3.10 or newer already on the
+machine** — despite appearances it does not install Python for you. It probes for `python3`, and if
+nothing suitable is found it prints instructions and exits without installing anything. It then
+builds a virtualenv and pip-installs into it, so Debian/Ubuntu needs `python3-venv` as well.
+
+```bash
+python3 --version
+# must print 3.10 or newer. If it does not, install Python first:
+#   macOS          brew install python
+#   Debian/Ubuntu  sudo apt update && sudo apt install python3 python3-venv
+#   Fedora/RHEL    sudo dnf install python3 python3-pip
+```
+
+On macOS a suitable Python is often present but *shadowed* by an older one earlier in `PATH`; the
+installer detects that case and tells you which directory to move up.
 
 ```bash
 curl -LsSf https://hf.co/cli/install.sh | bash -s
@@ -890,6 +904,9 @@ cat scripts/questions.csv       # five questions, four with no expected answer y
 ./scripts/eval.sh <you>/big-data-ai
 ```
 
+The harness also takes a full URL instead of a Space, which is how you score a container running
+on your own machine: `./scripts/eval.sh http://localhost:7860`.
+
 You get a table like this — and **most of the `correct` column says `--`, meaning "not scored"**:
 
 ```
@@ -942,6 +959,12 @@ questions is fine; do not put fifty in the CSV and leave it looping.
 ---
 
 ## F2 — Model bake-off on Inference Providers (30 min)
+
+> **Didn't finish F1's eval set? You are not stuck.** `scripts/answers.csv` holds the same five
+> questions with the expected values already derived, so F2 works without it:
+> `./scripts/eval.sh <you>/big-data-ai scripts/answers.csv`. Use your own set if you have one —
+> deriving the numbers is F1's lesson and these are only a fallback. They assume **2015 loaded on
+> its own**; if you have loaded another year as well, the totals will disagree.
 
 > **Work through this on your own.** It needs F1's eval set finished — at minimum three questions
 > with expected answers you derived yourself. Without that there is nothing to compare.
