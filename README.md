@@ -294,6 +294,15 @@ Before you can query data, you need to set up the environment and load data. You
 
 This repo doubles as the codebase for a 3-4 hour hands-on workshop.
 
+> **Attending the workshop? Start here:**
+> [**Attendee Start Here**](https://claude.ai/code/artifact/5b6eab72-56c0-4bf2-af9a-fe4894a4a78e)
+> — pre-work to do before the day, the setup sequence, the running order, and a guide per lab.
+> The same page is in this repo at `docs/artifacts/attendee-start-here.html`; open it with
+> `open docs/artifacts/attendee-start-here.html` (macOS) or `xdg-open` (Linux) if you would
+> rather read it locally.
+>
+> Everything below is for whoever is *running* the day.
+
 *   `WORKSHOP.md` — the core labs (H1, F1, F2, H2, H3, H4), full text
 *   `WORKSHOP-FEATURE-LABS.md` / `WORKSHOP-BONUS-LABS.md` — the product-ticket and technology framings
 *   `WORKSHOP-EXERCISE-INDEX.md` — all 41 exercises, with difficulty and prerequisites
