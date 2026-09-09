@@ -224,6 +224,19 @@ Inference Providers, starting Jobs, publishing a dataset, and the S3 credentials
 the token. Everything lives in the attendee's <strong>own namespace</strong>, so only the
 <em>User permissions</em> section matters; there is no organisation involved.</p>
 
+<p><strong>Where these are in the UI</strong> &mdash; the three things people hunt for, in the order
+they need them:</p>
+<div class="tw"><table>
+  <thead><tr><th>What</th><th>Where</th></tr></thead>
+  <tbody>
+    <tr><td>Create the token</td><td><a href="https://huggingface.co/settings/tokens">huggingface.co/settings/tokens</a> &rarr; <strong>New token</strong></td></tr>
+    <tr><td><strong>S3 credentials</strong></td><td><em>Same page.</em> Click the <strong>⋯</strong> next to the Full Access token &rarr; <strong>Generate S3 credentials</strong></td></tr>
+    <tr><td>Your dashboard</td><td>Avatar, <strong>top right</strong> &rarr; <strong>Profile · &lt;Your Name&gt;</strong> &mdash; Spaces, datasets, buckets and Jobs all hang off here</td></tr>
+  </tbody>
+</table></div>
+<p>The S3 step catches everyone: the credentials come <strong>from the token</strong>, not from a
+bucket or storage page, so people go looking somewhere else entirely.</p>
+
 <p><strong>Step 2 — install the CLI and log in.</strong> The installer needs
 <strong>Python 3.10+ already on the machine</strong> &mdash; it does not install Python for you. It
 probes for <code>python3</code>, and if nothing suitable is found it prints instructions and exits
@@ -406,7 +419,8 @@ hf spaces volumes set &lt;you&gt;/big-data-ai -v hf://buckets/&lt;you&gt;/lakeho
 hf spaces volumes ls &lt;you&gt;/big-data-ai
 
 <span class="c"># ---- 4. S3 credentials: browser only ------------------------------------</span>
-<span class="c"># tokens page -&gt; the token's ... menu -&gt; Generate S3 credentials</span>
+<span class="c"># https://huggingface.co/settings/tokens -&gt; the ... beside the Full Access</span>
+<span class="c"># token -&gt; Generate S3 credentials.  From the TOKEN, not from the bucket.</span>
 <span class="c"># HFAK... access key + a secret shown exactly once</span>
 
 <span class="c"># ---- 5. settings, from a file rather than seven flags -------------------</span>

@@ -392,7 +392,8 @@ hf spaces volumes set &lt;you&gt;/big-data-ai -v hf://buckets/&lt;you&gt;/lakeho
 hf spaces volumes ls &lt;you&gt;/big-data-ai
 
 <span class="c"># ---- 4. S3 credentials: browser only ------------------------------------</span>
-<span class="c"># tokens page -&gt; the token's ... menu -&gt; Generate S3 credentials</span>
+<span class="c"># https://huggingface.co/settings/tokens -&gt; the ... beside the Full Access</span>
+<span class="c"># token -&gt; Generate S3 credentials.  From the TOKEN, not from the bucket.</span>
 
 <span class="c"># ---- 5. settings from a file, not seven flags ---------------------------</span>
 cat &gt; space.env &lt;&lt;'EOF'

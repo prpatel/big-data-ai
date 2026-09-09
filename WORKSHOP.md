@@ -47,6 +47,17 @@ workshop — a token missing one box authenticates perfectly and then fails with
 Everything lives in the attendee's **own namespace**, so only the *User permissions* section
 matters. No organisation is involved.
 
+**Where these things are in the UI.** Three items people hunt for, in the order you need them:
+
+| What | Where |
+|---|---|
+| Create the token | <https://huggingface.co/settings/tokens> → **New token** |
+| **S3 credentials** | *Same page.* Click the **⋯** next to the Full Access token you just made → **Generate S3 credentials** |
+| Your dashboard | Avatar, **top right** → **Profile · &lt;Your Name&gt;** — your Spaces, datasets, buckets and Jobs all hang off here |
+
+The S3 step catches everyone: the credentials are generated **from the token**, not from a bucket
+or a storage page, so people go looking in the wrong place. Same page you were already on.
+
 **2. Install the CLI and log in.** The installer needs **Python 3.10 or newer already on the
 machine** — despite appearances it does not install Python for you. It probes for `python3`, and if
 nothing suitable is found it prints instructions and exits without installing anything. It then
@@ -525,10 +536,13 @@ hf spaces volumes set <you>/big-data-ai -v hf://buckets/<you>/lakehouse:/data
 hf spaces volumes ls <you>/big-data-ai
 ```
 
-**4. S3 credentials — the one step with no CLI.** In the browser:
-[hf.co/settings/tokens](https://huggingface.co/settings/tokens) → your token's **⋯** menu →
-**Generate S3 credentials**. You get an access key starting `HFAK…` and a secret **shown once**.
-Copy both somewhere before leaving the page.
+**4. S3 credentials — the one step with no CLI.** In the browser, go to
+<https://huggingface.co/settings/tokens>, find the **Full Access** token from the pre-work, click
+the **⋯** to the right of it, and choose **Generate S3 credentials**. You get an access key
+starting `HFAK…` and a secret **shown once**. Copy both somewhere before leaving the page.
+
+They come from the token, not from the bucket — if you are on a storage or bucket page looking for
+this, you are on the wrong page.
 
 ```bash
 # ---- 5. settings, from a file rather than seven flags ------------------------
