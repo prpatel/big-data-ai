@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Lakehouse Workshop Handbook</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -213,7 +214,7 @@ run.</p>
 <div class="cat"><span class="letter">2</span><h2>What attendees actually do</h2></div>
 
 <h3 style="font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:1.6rem 0 .5rem">Pre-work — send a week ahead, remind the night before</h3>
-<p style="font-size:.95rem"><strong>Do not paste these steps into an email.</strong> Send <a href="https://claude.ai/code/artifact/5b6eab72-56c0-4bf2-af9a-fe4894a4a78e">Attendee Start Here</a> instead &mdash; same wording, with tick-boxes that persist, the schedule, and links to every lab guide. What follows is that page&rsquo;s content, so you know what they were told.</p>
+<p style="font-size:.95rem"><strong>Do not paste these steps into an email.</strong> Send <a href="attendee-start-here.html">Attendee Start Here</a> instead &mdash; same wording, with tick-boxes that persist, the schedule, and links to every lab guide. What follows is that page&rsquo;s content, so you know what they were told.</p>
 
 <p><strong>Step 1 — create one token with Full Access.</strong> At
 <a href="https://huggingface.co/settings/tokens">hf.co/settings/tokens</a>: <strong>New token</strong>
@@ -552,12 +553,12 @@ near-free, inference is the bulk, buckets are within the free allowance.</p>
 <div class="tw"><table>
   <thead><tr><th>Page</th><th>What's in it</th></tr></thead>
   <tbody>
-    <tr><td><a href="https://claude.ai/code/artifact/5b6eab72-56c0-4bf2-af9a-fe4894a4a78e"><strong>Attendee Start Here</strong></a></td><td><strong>The one link to send attendees.</strong> Pre-work, the setup sequence, the schedule and every lab guide &mdash; and none of the pages, costs or variant decisions on this one</td></tr>
-    <tr><td><a href="https://claude.ai/code/artifact/140df8c3-feba-4540-870a-bc4bea2d98e9"><strong>Exercise Picker</strong></a></td><td>All 41 exercises with descriptions, ordered AI-first, Iceberg and non-LLM material parked at the bottom. <strong>Start here when choosing.</strong></td></tr>
-    <tr><td><a href="https://claude.ai/code/artifact/89842f15-33a1-4a49-bd4b-7eae2c0e4df0"><strong>Workshop Program</strong></a></td><td>The six core labs in full — prep checklist, costs, risks, local development, and the measured build numbers</td></tr>
-    <tr><td><a href="https://claude.ai/code/artifact/3a8d31cd-3d4c-49ca-887b-8a199b5fccca"><strong>Meridian Backlog</strong></a></td><td>The product-ticket framing: personas, quoted asks, acceptance criteria and the interesting problem in each</td></tr>
-    <tr><td><a href="https://claude.ai/code/artifact/e095dd80-a75e-4329-b97c-d3c38250a3ba"><strong>Lab Catalogue</strong></a></td><td>The technology framing — Iceberg internals, streaming, multi-engine, AI architecture</td></tr>
-    <tr><td><a href="https://claude.ai/code/artifact/c4160111-f64c-4a4e-af7a-a1c1dda8b390"><strong>Setup Runbook</strong></a></td><td>What the three admin buttons actually do, with diagrams. Good attendee reading during the hour-1 build</td></tr>
+    <tr><td><a href="attendee-start-here.html"><strong>Attendee Start Here</strong></a></td><td><strong>The one link to send attendees.</strong> Pre-work, the setup sequence, the schedule and every lab guide &mdash; and none of the pages, costs or variant decisions on this one</td></tr>
+    <tr><td><a href="lakehouse-exercise-picker.html"><strong>Exercise Picker</strong></a></td><td>All 41 exercises with descriptions, ordered AI-first, Iceberg and non-LLM material parked at the bottom. <strong>Start here when choosing.</strong></td></tr>
+    <tr><td><a href="lakehouse-workshop-program.html"><strong>Workshop Program</strong></a></td><td>The six core labs in full — prep checklist, costs, risks, local development, and the measured build numbers</td></tr>
+    <tr><td><a href="meridian-property-backlog.html"><strong>Meridian Backlog</strong></a></td><td>The product-ticket framing: personas, quoted asks, acceptance criteria and the interesting problem in each</td></tr>
+    <tr><td><a href="lakehouse-lab-catalogue.html"><strong>Lab Catalogue</strong></a></td><td>The technology framing — Iceberg internals, streaming, multi-engine, AI architecture</td></tr>
+    <tr><td><a href="iceberg-setup-runbook.html"><strong>Setup Runbook</strong></a></td><td>What the three admin buttons actually do, with diagrams. Good attendee reading during the hour-1 build</td></tr>
   </tbody>
 </table></div>
 
@@ -568,11 +569,11 @@ also linked from each lab's slot in the Program.</p>
 <div class="tw"><table>
   <thead><tr><th>Lab</th><th>Guide</th></tr></thead>
   <tbody>
-    <tr><td><strong>F1</strong></td><td><a href="https://claude.ai/code/artifact/250819f3-61a5-4ddb-a20d-8573e8be30ab">Make the analyst trustworthy</a> &mdash; attack the guard, kill the second count, make the prompt fix the fences</td></tr>
-    <tr><td><strong>F2</strong></td><td><a href="https://claude.ai/code/artifact/04543121-4442-407f-9c7f-1c228bc131d1">Model bake-off</a> &mdash; run the eval set across providers and pick on evidence</td></tr>
-    <tr><td><strong>H3</strong></td><td><a href="https://claude.ai/code/artifact/1bb55baa-e526-4420-acd1-a75c91a5541d">Publish to the Hub</a> &mdash; the Job, the dataset, the Viewer, and what each HF service is doing</td></tr>
-    <tr><td><strong>A10</strong></td><td><a href="https://claude.ai/code/artifact/fc399127-31ae-415b-a336-f7bf5c4232bd">Defensible comps</a> &mdash; bonus lab</td></tr>
-    <tr><td><strong>A11</strong></td><td><a href="https://claude.ai/code/artifact/5d0a622c-5893-44db-8b9b-8552c7e16b11">Chart the result</a> &mdash; and refuse to chart when a chart would lie</td></tr>
+    <tr><td><strong>F1</strong></td><td><a href="lab-f1-trustworthy-analyst.html">Make the analyst trustworthy</a> &mdash; attack the guard, kill the second count, make the prompt fix the fences</td></tr>
+    <tr><td><strong>F2</strong></td><td><a href="lab-f2-model-bakeoff.html">Model bake-off</a> &mdash; run the eval set across providers and pick on evidence</td></tr>
+    <tr><td><strong>H3</strong></td><td><a href="lab-h3-publish-to-hub.html">Publish to the Hub</a> &mdash; the Job, the dataset, the Viewer, and what each HF service is doing</td></tr>
+    <tr><td><strong>A10</strong></td><td><a href="lab-a10-defensible-comps.html">Defensible comps</a> &mdash; bonus lab</td></tr>
+    <tr><td><strong>A11</strong></td><td><a href="lab-a11-chart-the-result.html">Chart the result</a> &mdash; and refuse to chart when a chart would lie</td></tr>
   </tbody>
 </table></div>
 

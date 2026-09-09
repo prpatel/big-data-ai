@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Lakehouse Workshop Program</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -540,7 +541,7 @@ hf spaces logs &lt;you&gt;/big-data-ai | grep EMBEDDED_MINIO
       <span class="lab-no">F1 · the keystone</span><span class="lab-dur">40 min</span>
       <h3 class="lab-title">Make the analyst trustworthy</h3>
     </div>
-    <p class="guide"><a href="https://claude.ai/code/artifact/250819f3-61a5-4ddb-a20d-8573e8be30ab">Step-by-step build guide &rarr;</a></p>
+    <p class="guide"><a href="lab-f1-trustworthy-analyst.html">Step-by-step build guide &rarr;</a></p>
     <p>Three defects that were exercises in an earlier draft are <strong>already fixed in the code
     they clone</strong> — <code>SqlGuard</code>, <code>SchemaStore</code> and <code>SqlAnswer</code>.
     Attacking a working guard teaches more in forty minutes than building one, and a room of
@@ -603,7 +604,7 @@ hf spaces logs &lt;you&gt;/big-data-ai | grep EMBEDDED_MINIO
       <span class="lab-no">F2</span><span class="lab-dur">30 min</span>
       <h3 class="lab-title">Model bake-off on Inference Providers</h3>
     </div>
-    <p class="guide"><a href="https://claude.ai/code/artifact/04543121-4442-407f-9c7f-1c228bc131d1">Step-by-step build guide &rarr;</a></p>
+    <p class="guide"><a href="lab-f2-model-bakeoff.html">Step-by-step build guide &rarr;</a></p>
     <p><strong>First half of the lab: make the model a runtime parameter.</strong> It's currently
     pinned in <code>application.properties</code> and baked into the <code>ChatClient</code> at
     construction, so comparing four models the obvious way costs four deploys. One push fixes it —
@@ -640,7 +641,7 @@ hf models list --inference-provider groq --warm</code></pre>
       <span class="lab-no">A11 · first AI feature</span><span class="lab-dur">30 min</span>
       <h3 class="lab-title">Don't make me read a table</h3>
     </div>
-    <p class="guide"><a href="https://claude.ai/code/artifact/5d0a622c-5893-44db-8b9b-8552c7e16b11">Step-by-step build guide &rarr;</a></p>
+    <p class="guide"><a href="lab-a11-chart-the-result.html">Step-by-step build guide &rarr;</a></p>
     <p>Priya, who builds client decks: <em>“When I ask how prices have moved in Camden I get two
     hundred rows of numbers. I need the picture. I'm currently rebuilding every one of them in
     Excel.”</em> Results should render as the right chart automatically.</p>
@@ -702,7 +703,7 @@ hf jobs logs &lt;job-id&gt; --follow</code></pre>
       <span class="lab-no">H3 · pick one</span><span class="lab-dur">25 min</span>
       <h3 class="lab-title">Publish it — then check whether you needed Spark</h3>
     </div>
-    <p class="guide"><a href="https://claude.ai/code/artifact/1bb55baa-e526-4420-acd1-a75c91a5541d">Step-by-step build guide &rarr;</a></p>
+    <p class="guide"><a href="lab-h3-publish-to-hub.html">Step-by-step build guide &rarr;</a></p>
     <p>Export the table to Parquet, <code>hf upload --type dataset</code>, write the card. Open the
     repo page: the <strong>Dataset Viewer and its SQL console are just there</strong>, over data they
     loaded twenty minutes ago.</p>
