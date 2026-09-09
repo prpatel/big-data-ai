@@ -14,11 +14,11 @@ to do when it doesn't work. Written to be usable with no instructor in the room.
 
 | Lab | File | Published at |
 |---|---|---|
-| F1 | `lab-f1-trustworthy-analyst.html` | https://claude.ai/code/artifact/250819f3-61a5-4ddb-a20d-8573e8be30ab |
-| F2 | `lab-f2-model-bakeoff.html` | https://claude.ai/code/artifact/04543121-4442-407f-9c7f-1c228bc131d1 |
-| H3 | `lab-h3-publish-to-hub.html` | https://claude.ai/code/artifact/1bb55baa-e526-4420-acd1-a75c91a5541d |
-| A10 | `lab-a10-defensible-comps.html` | https://claude.ai/code/artifact/fc399127-31ae-415b-a336-f7bf5c4232bd |
-| A11 | `lab-a11-chart-the-result.html` | https://claude.ai/code/artifact/5d0a622c-5893-44db-8b9b-8552c7e16b11 |
+| F1 | `lab-f1-trustworthy-analyst.html` | lab-f1-trustworthy-analyst.html |
+| F2 | `lab-f2-model-bakeoff.html` | lab-f2-model-bakeoff.html |
+| H3 | `lab-h3-publish-to-hub.html` | lab-h3-publish-to-hub.html |
+| A10 | `lab-a10-defensible-comps.html` | lab-a10-defensible-comps.html |
+| A11 | `lab-a11-chart-the-result.html` | lab-a11-chart-the-result.html |
 
 ## Reference pages
 
@@ -27,13 +27,13 @@ is running the day.
 
 | Page | File | Published at |
 |---|---|---|
-| **Attendee Start Here** | `attendee-start-here.html` | https://claude.ai/code/artifact/5b6eab72-56c0-4bf2-af9a-fe4894a4a78e |
-| Workshop Handbook | `workshop-handbook.html` | https://claude.ai/code/artifact/0a44117f-66ed-449d-b02f-d7054665a284 |
-| Workshop Program | `lakehouse-workshop-program.html` | https://claude.ai/code/artifact/89842f15-33a1-4a49-bd4b-7eae2c0e4df0 |
-| Exercise Picker | `lakehouse-exercise-picker.html` | https://claude.ai/code/artifact/140df8c3-feba-4540-870a-bc4bea2d98e9 |
-| Lab Catalogue | `lakehouse-lab-catalogue.html` | https://claude.ai/code/artifact/e095dd80-a75e-4329-b97c-d3c38250a3ba |
-| Meridian Backlog | `meridian-property-backlog.html` | https://claude.ai/code/artifact/3a8d31cd-3d4c-49ca-887b-8a199b5fccca |
-| Iceberg Setup Runbook | `iceberg-setup-runbook.html` | https://claude.ai/code/artifact/c4160111-f64c-4a4e-af7a-a1c1dda8b390 |
+| **Attendee Start Here** | `attendee-start-here.html` | attendee-start-here.html |
+| Workshop Handbook | `workshop-handbook.html` | `./workshop-handbook.html` |
+| Workshop Program | `lakehouse-workshop-program.html` | lakehouse-workshop-program.html |
+| Exercise Picker | `lakehouse-exercise-picker.html` | lakehouse-exercise-picker.html |
+| Lab Catalogue | `lakehouse-lab-catalogue.html` | lakehouse-lab-catalogue.html |
+| Meridian Backlog | `meridian-property-backlog.html` | meridian-property-backlog.html |
+| Iceberg Setup Runbook | `iceberg-setup-runbook.html` | iceberg-setup-runbook.html |
 
 ## Editing one
 
