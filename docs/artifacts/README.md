@@ -22,8 +22,12 @@ to do when it doesn't work. Written to be usable with no instructor in the room.
 
 ## Reference pages
 
+`attendee-start-here.html` is the only one written for attendees; the rest are for whoever
+is running the day.
+
 | Page | File | Published at |
 |---|---|---|
+| **Attendee Start Here** | `attendee-start-here.html` | https://claude.ai/code/artifact/5b6eab72-56c0-4bf2-af9a-fe4894a4a78e |
 | Workshop Handbook | `workshop-handbook.html` | https://claude.ai/code/artifact/0a44117f-66ed-449d-b02f-d7054665a284 |
 | Workshop Program | `lakehouse-workshop-program.html` | https://claude.ai/code/artifact/89842f15-33a1-4a49-bd4b-7eae2c0e4df0 |
 | Exercise Picker | `lakehouse-exercise-picker.html` | https://claude.ai/code/artifact/140df8c3-feba-4540-870a-bc4bea2d98e9 |

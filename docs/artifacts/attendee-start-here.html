@@ -1,0 +1,459 @@
+<title>Attendee Start Here</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+
+<style>
+  :root {
+    --ground:#FAF9FC; --surface:#FFFFFF; --sunk:#F1EFF5; --ink:#17141F;
+    --muted:#5A5370; --faint:#837B99; --rule:#E3DFEB;
+    --accent:#C96A05; --accent-soft:#FBEEDC;
+    --time:#5646CE; --time-soft:#EDEAFB;
+    --green:#1F6B4A; --green-soft:#DFF0E7;
+    --shadow:0 1px 2px rgba(23,20,31,.05), 0 10px 30px -22px rgba(23,20,31,.4);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --ink:#EDEAF4;
+      --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+      --accent:#FFB44D; --accent-soft:#2B1E0E;
+      --time:#A594FF; --time-soft:#1D1836;
+      --green:#5FC492; --green-soft:#10241B;
+      --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#0E0C13; --surface:#171420; --sunk:#13111B; --ink:#EDEAF4;
+    --muted:#A199B5; --faint:#7E7595; --rule:#2A2537;
+    --accent:#FFB44D; --accent-soft:#2B1E0E;
+    --time:#A594FF; --time-soft:#1D1836;
+    --green:#5FC492; --green-soft:#10241B;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -22px rgba(0,0,0,.9);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.55;
+    margin: 0; -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 58rem; margin: 0 auto; padding: clamp(2rem,5vw,4rem) clamp(1rem,4vw,3rem) 6rem; }
+
+  .masthead { border-bottom: 3px double var(--rule); padding-bottom: 1.6rem; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace; font-size: .68rem; font-weight: 500;
+    letter-spacing: .2em; text-transform: uppercase; color: var(--accent); margin: 0 0 1rem;
+  }
+  h1 {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(2.1rem, 5.4vw, 3.2rem); line-height: 1.03; letter-spacing: -.025em;
+    margin: 0 0 .9rem; text-wrap: balance;
+  }
+  .standfirst { font-size: 1.1rem; color: var(--muted); max-width: 40rem; margin: 0; }
+
+  h2 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 1.55rem;
+    letter-spacing: -.018em; margin: 0; text-wrap: balance;
+  }
+  h3 {
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.08rem;
+    letter-spacing: -.008em; margin: 0 0 .5rem;
+  }
+  .cat {
+    display: flex; align-items: baseline; gap: .9rem; flex-wrap: wrap;
+    margin: 3.2rem 0 1.2rem; border-top: 2px solid var(--ink); padding-top: 1rem;
+  }
+  .cat .letter {
+    font-family: "JetBrains Mono", monospace; font-size: .7rem; font-weight: 700;
+    letter-spacing: .18em; color: var(--accent); white-space: nowrap;
+  }
+  .cat .sub { font-size: .93rem; color: var(--muted); width: 100%; margin: 0; max-width: 42rem; }
+
+  p { margin: 0 0 1rem; }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--time); outline-offset: 3px; }
+  code {
+    font-family: "JetBrains Mono", monospace; font-size: .82em;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 3px; padding: .04em .3em;
+  }
+  pre {
+    font-family: "JetBrains Mono", monospace; font-size: .78rem; line-height: 1.62;
+    background: var(--sunk); border: 1px solid var(--rule); border-radius: 6px;
+    padding: .9rem 1.1rem; overflow-x: auto; margin: .9rem 0;
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+  .c { color: var(--faint); }
+
+  /* checklist steps */
+  .step {
+    display: grid; grid-template-columns: auto 1fr; gap: .5rem 1rem;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 8px;
+    box-shadow: var(--shadow); padding: 1.1rem 1.3rem; margin-bottom: 1rem;
+  }
+  .step > .body { min-width: 0; }
+  .step p:last-child, .step pre:last-child { margin-bottom: 0; }
+  .tick {
+    appearance: none; -webkit-appearance: none;
+    width: 1.35rem; height: 1.35rem; margin: .15rem 0 0; flex: none;
+    border: 2px solid var(--rule); border-radius: 5px; background: var(--surface);
+    cursor: pointer; display: grid; place-content: center; transition: border-color .12s, background .12s;
+  }
+  .tick:hover { border-color: var(--accent); }
+  .tick:focus-visible { outline: 2px solid var(--time); outline-offset: 2px; }
+  .tick:checked { background: var(--green); border-color: var(--green); }
+  .tick:checked::after {
+    content: ""; width: .38rem; height: .72rem; margin-top: -.16rem;
+    border: solid var(--surface); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg);
+  }
+  .step:has(.tick:checked) { opacity: .58; }
+  .step:has(.tick:checked) h3 { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+
+  .tw { overflow-x: auto; margin: 1.2rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .93rem; min-width: 22rem; }
+  th, td { text-align: left; padding: .5rem .8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: "JetBrains Mono", monospace; font-size: .62rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); font-weight: 500; border-bottom: 2px solid var(--ink);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.k { font-family: "JetBrains Mono", monospace; font-size: .8rem; white-space: nowrap; }
+
+  .warn {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 5px 5px 0; padding: .9rem 1.1rem; margin: 1.1rem 0;
+  }
+  .warn p { margin: 0; font-size: .95rem; }
+  .warn p + p { margin-top: .5rem; }
+  .warn .l {
+    font-family: "JetBrains Mono", monospace; font-size: .63rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); display: block; margin-bottom: .35rem; font-weight: 700;
+  }
+
+  /* schedule */
+  .slot {
+    display: flex; align-items: baseline; gap: .9rem; flex-wrap: wrap;
+    padding: .5rem .8rem; border-bottom: 1px solid var(--rule);
+  }
+  .slot:last-child { border-bottom: 0; }
+  .slot .t {
+    font-family: "JetBrains Mono", monospace; font-size: .74rem; color: var(--time);
+    background: var(--time-soft); border-radius: 3px; padding: .12rem .45rem; white-space: nowrap;
+  }
+  .slot .n { font-weight: 600; }
+  .slot .n span { font-weight: 400; color: var(--muted); }
+  .slot.rest .n, .slot.rest .n span { color: var(--faint); font-weight: 400; }
+
+  /* guide cards */
+  .guides { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin: 1.2rem 0; }
+  .guide {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 8px;
+    box-shadow: var(--shadow); padding: .95rem 1.1rem;
+  }
+  .guide .id {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; font-weight: 700; letter-spacing: .1em;
+    background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent);
+    border-radius: 3px; padding: .14rem .42rem; white-space: nowrap;
+  }
+  .guide .id.bonus { background: transparent; border-style: dashed; color: var(--muted); border-color: var(--rule); }
+  .guide h3 { margin: .55rem 0 .3rem; font-size: 1rem; }
+  .guide p { font-size: .89rem; color: var(--muted); margin: 0 0 .6rem; }
+  .guide a { font-family: "JetBrains Mono", monospace; font-size: .74rem; font-weight: 700; text-decoration: none; }
+  .guide a:hover { text-decoration: underline; }
+
+  .foot { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); font-size: .9rem; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="page">
+
+<header class="masthead">
+  <p class="eyebrow">Lakehouse + AI workshop · start here</p>
+  <h1>Everything you need, before and during the day</h1>
+  <p class="standfirst">Four hours taking an Iceberg/Spark app from a laptop demo to a lakehouse
+  running on Hugging Face, with an AI analyst on top. Part 1 below is the pre-work — do it before
+  you arrive, or you will spend the first hour catching up.</p>
+</header>
+
+<div class="cat"><span class="letter">Part 1</span><h2>Before you arrive</h2>
+  <p class="sub">Twenty minutes, done at home. Everything after this assumes it. Tick items off as
+  you go — this page remembers on this browser.</p>
+</div>
+
+<div class="step">
+  <input type="checkbox" class="tick" id="t1" aria-label="Pre-work step 1 done">
+  <div class="body">
+    <h3>1 · Create one token with Full Access</h3>
+    <p>At <a href="https://huggingface.co/settings/tokens">huggingface.co/settings/tokens</a>:
+    <strong>New token</strong> → type <strong>Fine-grained</strong> → name it <code>workshop</code>
+    → click the <strong>Full Access</strong> preset → <strong>Create</strong>.
+    <strong>Copy it now</strong> — it is shown once.</p>
+    <p>Everything lives in your own namespace, so only the <em>User permissions</em> section
+    matters. Full Access is deliberate: a token missing one box authenticates perfectly and then
+    fails later with <code>AccessDenied … Unknown</code>, naming no permission.</p>
+  </div>
+</div>
+
+<div class="step">
+  <input type="checkbox" class="tick" id="t2" aria-label="Pre-work step 2 done">
+  <div class="body">
+    <h3>2 · Generate S3 credentials from that token</h3>
+    <p><em>Same page.</em> Click the <strong>⋯</strong> beside the Full Access token you just made
+    → <strong>Generate S3 credentials</strong>. You get an access key starting <code>HFAK…</code>
+    and a secret <strong>shown exactly once</strong>. Copy both somewhere before leaving the page.</p>
+    <div class="warn">
+      <span class="l">The one everybody hunts for</span>
+      <p>These come <strong>from the token</strong>, not from a bucket or a storage page. If you are
+      looking at a bucket trying to find them, you are on the wrong page.</p>
+    </div>
+  </div>
+</div>
+
+<div class="step">
+  <input type="checkbox" class="tick" id="t3" aria-label="Pre-work step 3 done">
+  <div class="body">
+    <h3>3 · Install the CLI and log in</h3>
+    <p>The installer needs <strong>Python 3.10+ already on your machine</strong> — it does not
+    install Python for you. It looks for <code>python3</code>, and if it finds nothing suitable it
+    prints instructions and stops, having installed nothing.</p>
+<pre><code>python3 --version
+<span class="c"># must print 3.10 or newer. If not, install Python first:</span>
+<span class="c">#   macOS          brew install python</span>
+<span class="c">#   Debian/Ubuntu  sudo apt update &amp;&amp; sudo apt install python3 python3-venv</span>
+<span class="c">#   Fedora/RHEL    sudo dnf install python3 python3-pip</span>
+
+curl -LsSf https://hf.co/cli/install.sh | bash -s
+hf auth login --token hf_xxx --add-to-git-credential   <span class="c"># --token is required: browser login ignores the flag</span>
+hf auth whoami                                         <span class="c"># confirms which account the token belongs to</span></code></pre>
+    <p>It builds a virtualenv and pip-installs into it, so Debian/Ubuntu needs
+    <code>python3-venv</code> as well. On macOS a good Python is often present but
+    <em>shadowed</em> by an older one earlier in <code>PATH</code> — the installer detects that and
+    names the directory to move up.</p>
+  </div>
+</div>
+
+<div class="step">
+  <input type="checkbox" class="tick" id="t4" aria-label="Pre-work step 4 done">
+  <div class="body">
+    <h3>4 · Pre-flight — the second call is the one that matters</h3>
+    <p>A read-only token passes a read check and proves nothing. Prove it can <strong>write</strong>.</p>
+<pre><code><span class="c"># inference works and the credit is on your account</span>
+curl -s https://router.huggingface.co/v1/chat/completions \
+  -H "Authorization: Bearer $(hf auth token)" -H "Content-Type: application/json" \
+  -d '{"model":"openai/gpt-oss-120b:cheapest","messages":[{"role":"user","content":"say ok"}]}'
+
+<span class="c"># the token can WRITE</span>
+hf buckets create &lt;you&gt;/preflight --private
+hf buckets delete &lt;you&gt;/preflight --yes</code></pre>
+    <p>Also bring <strong>git and an editor</strong>. No Docker, no Java, no Maven — the whole day
+    is push-to-deploy, because the local stack is ~700&nbsp;MB of pulls per laptop and conference
+    wifi will not carry that for a room.</p>
+  </div>
+</div>
+
+<div class="cat"><span class="letter">Finding things</span><h2>Where these are in the UI</h2></div>
+
+<div class="tw"><table>
+  <thead><tr><th>What</th><th>Where</th></tr></thead>
+  <tbody>
+    <tr><td>Create the token</td><td><a href="https://huggingface.co/settings/tokens">huggingface.co/settings/tokens</a> → <strong>New token</strong></td></tr>
+    <tr><td><strong>S3 credentials</strong></td><td><em>Same page.</em> The <strong>⋯</strong> beside your Full Access token → <strong>Generate S3 credentials</strong></td></tr>
+    <tr><td>Your dashboard</td><td>Avatar, <strong>top right</strong> → <strong>Profile · &lt;Your Name&gt;</strong>. Your Spaces, datasets, buckets and Jobs all hang off here</td></tr>
+  </tbody>
+</table></div>
+
+<div class="cat"><span class="letter">Part 2</span><h2>On the day — the first fifteen minutes</h2>
+  <p class="sub">Run this once, in order. Replace <code>&lt;you&gt;</code> with your username
+  everywhere. Do not assemble it from memory — the seven <code>APP_S3_*</code> settings decide
+  whether your table lands on a Hugging Face bucket or quietly falls back to a bundled MinIO, and
+  skipping them fails <em>silently</em>.</p>
+</div>
+
+<pre><code><span class="c"># ---- 1. the code -------------------------------------------------------</span>
+git clone https://github.com/prpatel/big-data-ai big-data-ai
+cd big-data-ai
+
+<span class="c"># ---- 2. the Space ------------------------------------------------------</span>
+<span class="c"># cpu-upgrade, not the free cpu-basic: that is what the timings assume</span>
+hf repos create &lt;you&gt;/big-data-ai --repo-type space --sdk docker --private --flavor cpu-upgrade
+
+<span class="c"># ---- 3. two buckets ----------------------------------------------------</span>
+<span class="c"># lakehouse: ordinary files - CSVs, catalog dump, the export</span>
+hf buckets create &lt;you&gt;/lakehouse --private
+<span class="c"># warehouse: the Iceberg table, over the S3 API, NEVER mounted</span>
+hf buckets create &lt;you&gt;/warehouse --private
+<span class="c"># only lakehouse is mounted, as the Space's /data</span>
+hf spaces volumes set &lt;you&gt;/big-data-ai -v hf://buckets/&lt;you&gt;/lakehouse:/data
+hf spaces volumes ls &lt;you&gt;/big-data-ai
+
+<span class="c"># ---- 4. S3 credentials: from the token, in the browser (Part 1 step 2) --</span>
+
+<span class="c"># ---- 5. settings, from a file rather than seven flags -------------------</span>
+cat &gt; space.env &lt;&lt;'EOF'
+APP_S3_ENDPOINT=https://s3.hf.co
+APP_S3_BUCKET=&lt;you&gt;
+APP_S3_KEY_PREFIX=warehouse
+APP_S3_STS_ENABLED=false
+APP_S3_CREATE_BUCKET=false
+APP_S3_CLIENT_SIDE_SIGNING=true
+APP_WAREHOUSE_EXPLICIT_LOCATION=false
+EOF
+
+cat space.env                  <span class="c"># check &lt;you&gt; is your username in BOTH places</span>
+hf spaces variables add &lt;you&gt;/big-data-ai --env-file space.env
+hf spaces variables ls &lt;you&gt;/big-data-ai    <span class="c"># must list all seven</span>
+
+<span class="c"># ---- 6. the three secrets, one at a time --------------------------------</span>
+hf spaces secrets add &lt;you&gt;/big-data-ai -s HF_TOKEN=hf_xxx
+hf spaces secrets add &lt;you&gt;/big-data-ai -s APP_S3_ACCESS_KEY=HFAK...
+hf spaces secrets add &lt;you&gt;/big-data-ai -s APP_S3_SECRET_KEY=...
+hf spaces secrets ls &lt;you&gt;/big-data-ai      <span class="c"># names only, never values</span>
+
+<span class="c"># ---- 7. deploy -----------------------------------------------------------</span>
+git remote add hf https://huggingface.co/spaces/&lt;you&gt;/big-data-ai
+git push --force hf main
+
+<span class="c"># ---- 8. watch it, then prove it is bucket-backed -------------------------</span>
+hf spaces logs &lt;you&gt;/big-data-ai --build --follow
+hf spaces wait &lt;you&gt;/big-data-ai
+hf spaces logs &lt;you&gt;/big-data-ai --follow   <span class="c"># the runtime log - keep it open all day</span>
+hf spaces logs &lt;you&gt;/big-data-ai | grep EMBEDDED_MINIO</code></pre>
+
+<div class="warn">
+  <span class="l">Two things that trip everyone</span>
+  <p><strong><code>APP_S3_BUCKET</code> is your username, not a bucket name.</strong> LakeKeeper
+  refuses an endpoint carrying a path, and HF buckets are addressed as
+  <code>namespace/bucket</code> — so the namespace plays the part of the S3 bucket and the real
+  bucket name becomes <code>APP_S3_KEY_PREFIX</code>. It reads wrongly and it is correct.</p>
+  <p><strong><code>--force</code> on the first push is expected.</strong>
+  <code>hf repos create</code> initialises the Space with its own README commit, so your local
+  <code>main</code> is unrelated history.</p>
+  <p>The one line that proves it worked, in the boot log:
+  <code>[init] EMBEDDED_MINIO=0; the warehouse lives in external storage</code>. No such line means
+  you are on MinIO, however healthy everything else looks.</p>
+</div>
+
+<div class="cat"><span class="letter">Part 3</span><h2>Load the data</h2>
+  <p class="sub">At <code>https://&lt;you&gt;-big-data-ai.hf.space/admin</code>, with the runtime log
+  still open beside you.</p>
+</div>
+
+<div class="tw"><table>
+  <thead><tr><th>Button</th><th>Takes</th><th>The log should say</th></tr></thead>
+  <tbody>
+    <tr><td class="k">Setup Environment</td><td class="k">~10s</td><td>Warehouse created (or “already existed; updated”)</td></tr>
+    <tr><td class="k">Download Data 2015</td><td class="k">~1m</td><td>Downloaded pp-2015.csv, about 170 MB</td></tr>
+    <tr><td class="k">Load Data 2015</td><td class="k">~30s</td><td>Data loaded successfully</td></tr>
+  </tbody>
+</table></div>
+
+<div class="warn">
+  <span class="l">The buttons lie, the log does not</span>
+  <p>All three say <em>“… operation initiated”</em> whether or not they worked. The log is the only
+  place the truth is. Confirm in the SQL box on the home page:</p>
+  <p><code>SELECT COUNT(*) FROM lakekeeper.housing.staging_prices</code> → about
+  <strong>1.01 million</strong>. If you get 0 or an error, read the log — do not just click Load
+  again.</p>
+</div>
+
+<div class="cat"><span class="letter">The day</span><h2>What is coming, and when</h2></div>
+
+<div class="slot"><span class="t">0:00 – 0:15</span><span class="n">Intro <span>— and you start your Space build, which runs while we talk</span></span></div>
+<div class="slot"><span class="t">0:15 – 0:45</span><span class="n">H1 <span>— Ship the thing</span></span></div>
+<div class="slot"><span class="t">0:45 – 0:50</span><span class="n">H2 <span>— Where the data actually lives (watch, don't type)</span></span></div>
+<div class="slot"><span class="t">0:50 – 1:30</span><span class="n">F1 <span>— Make the analyst trustworthy</span></span></div>
+<div class="slot rest"><span class="t">1:30 – 1:40</span><span class="n">Break</span></div>
+<div class="slot"><span class="t">1:40 – 2:10</span><span class="n">F2 <span>— Model bake-off</span></span></div>
+<div class="slot"><span class="t">2:10 – 2:40</span><span class="n">A11 <span>— Don't make me read a table</span></span></div>
+<div class="slot rest"><span class="t">2:40 – 2:50</span><span class="n">Break</span></div>
+<div class="slot"><span class="t">2:50 – 3:30</span><span class="n">Pick one <span>— H4 Jobs · H3 Publish &amp; engine shootout · R5 MCP</span></span></div>
+<div class="slot"><span class="t">3:30 – 3:50</span><span class="n">Demos <span>— every Space added to a shared Collection</span></span></div>
+<div class="slot rest"><span class="t">3:50 – 4:00</span><span class="n">Wrap</span></div>
+
+<div class="cat"><span class="letter">Your guides</span><h2>One page per lab</h2>
+  <p class="sub">Each is written so you can work through it alone: which file to open, what to type,
+  what you should see, and what to do when it doesn't happen.</p>
+</div>
+
+<div class="guides">
+  <div class="guide">
+    <span class="id">F1</span>
+    <h3>Make the analyst trustworthy</h3>
+    <p>Attack the SQL guard, kill the second count, make the prompt fix its own output. The lab you
+    will still be using next month.</p>
+    <a href="https://claude.ai/code/artifact/250819f3-61a5-4ddb-a20d-8573e8be30ab">Open the guide →</a>
+  </div>
+  <div class="guide">
+    <span class="id">F2</span>
+    <h3>Model bake-off</h3>
+    <p>Run your eval set across providers and choose a model on evidence rather than vibes. No code
+    to write.</p>
+    <a href="https://claude.ai/code/artifact/04543121-4442-407f-9c7f-1c228bc131d1">Open the guide →</a>
+  </div>
+  <div class="guide">
+    <span class="id">A11</span>
+    <h3>Chart the result</h3>
+    <p>Draw the right chart — and refuse to draw one when a chart would mislead. The refusing is the
+    hard part.</p>
+    <a href="https://claude.ai/code/artifact/5d0a622c-5893-44db-8b9b-8552c7e16b11">Open the guide →</a>
+  </div>
+  <div class="guide">
+    <span class="id">H3</span>
+    <h3>Publish to the Hub</h3>
+    <p>Turn your table into a public dataset with a viewer and a SQL console, then ask whether you
+    needed Spark at all.</p>
+    <a href="https://claude.ai/code/artifact/1bb55baa-e526-4420-acd1-a75c91a5541d">Open the guide →</a>
+  </div>
+  <div class="guide">
+    <span class="id bonus">A10 · bonus</span>
+    <h3>Defensible comps</h3>
+    <p>Not on the schedule. Take it if you finish early or want something to do afterwards.</p>
+    <a href="https://claude.ai/code/artifact/fc399127-31ae-415b-a336-f7bf5c4232bd">Open the guide →</a>
+  </div>
+  <div class="guide">
+    <span class="id bonus">Reference</span>
+    <h3>Iceberg Setup Runbook</h3>
+    <p>What those four <code>/admin</code> buttons actually do, with diagrams. Good reading while
+    your Space builds in hour one.</p>
+    <a href="https://claude.ai/code/artifact/c4160111-f64c-4a4e-af7a-a1c1dda8b390">Open the runbook →</a>
+  </div>
+</div>
+
+<div class="cat"><span class="letter">When stuck</span><h2>Three things to check before asking</h2></div>
+
+<div class="tw"><table>
+  <thead><tr><th>Symptom</th><th>Almost always</th></tr></thead>
+  <tbody>
+    <tr><td>Setup fails with a 400 from LakeKeeper</td><td>The S3 credentials, or <code>APP_S3_BUCKET</code> holding a bucket name instead of your username. Re-generate the credentials and click Setup again</td></tr>
+    <tr><td><strong>Generate Query</strong> returns a 500</td><td>The token: either it lacks <em>Make calls to Inference Providers</em>, or the billing setting is wrong. The real error is in the log, never on the page</td></tr>
+    <tr><td>A scripted call returns 404 on a Space that works in the browser</td><td>A private Space needs a session. Add <code>-H "Authorization: Bearer $(hf auth token)"</code></td></tr>
+  </tbody>
+</table></div>
+
+<p>The runtime log is the answer to most of these:
+<code>hf spaces logs &lt;you&gt;/big-data-ai --follow</code>. Keep it open all day.</p>
+
+<p class="foot">Pair up if you can — two people per Space halves the deploy round trips, and gives one
+of you the log while the other writes code. A build-and-restart cycle is about 1½–2 minutes, so
+batch your edits and push once.</p>
+
+</div>
+
+<script>
+  // Remembers ticked pre-work on this browser only. Storage can throw outright in a
+  // private window or a thumbnailer, so every access is guarded and a failure just
+  // means the boxes start empty - which is a perfectly good page.
+  (function () {
+    var KEY = 'attendee-prework-v1';
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.tick'));
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+    boxes.forEach(function (b) { if (saved[b.id]) b.checked = true; });
+    boxes.forEach(function (b) {
+      b.addEventListener('change', function () {
+        var state = {};
+        boxes.forEach(function (x) { if (x.checked) state[x.id] = 1; });
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* nothing to do */ }
+      });
+    });
+  })();
+</script>
